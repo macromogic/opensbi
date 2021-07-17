@@ -43,11 +43,11 @@ static void mstatus_init(struct sbi_scratch *scratch)
 
 	/* Enable FPU */
 	if (misa_extension('D') || misa_extension('F'))
-		mstatus_val |=  MSTATUS_FS;
+		mstatus_val |= MSTATUS_FS;
 
 	/* Enable Vector context */
 	if (misa_extension('V'))
-		mstatus_val |=  MSTATUS_VS;
+		mstatus_val |= MSTATUS_VS;
 
 	csr_write(CSR_MSTATUS, mstatus_val);
 
@@ -115,8 +115,7 @@ static int delegate_traps(struct sbi_scratch *scratch)
 
 	/* Send M-mode interrupts and most exceptions to S-mode */
 	interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
-	exceptions = (1U << CAUSE_MISALIGNED_FETCH) | (1U << CAUSE_BREAKPOINT) |
-		     (1U << CAUSE_USER_ECALL);
+	exceptions = (1U << CAUSE_MISALIGNED_FETCH) | (1U << CAUSE_BREAKPOINT);
 	if (sbi_platform_has_mfaults_delegation(plat))
 		exceptions |= (1U << CAUSE_FETCH_PAGE_FAULT) |
 			      (1U << CAUSE_LOAD_PAGE_FAULT) |
@@ -143,30 +142,30 @@ static int delegate_traps(struct sbi_scratch *scratch)
 	return 0;
 }
 
-void sbi_hart_delegation_dump(struct sbi_scratch *scratch,
-			      const char *prefix, const char *suffix)
+void sbi_hart_delegation_dump(struct sbi_scratch *scratch, const char *prefix,
+			      const char *suffix)
 {
 	if (!misa_extension('S'))
 		/* No delegation possible as mideleg does not exist*/
 		return;
 
 #if __riscv_xlen == 32
-	sbi_printf("%sMIDELEG%s: 0x%08lx\n",
-		   prefix, suffix, csr_read(CSR_MIDELEG));
-	sbi_printf("%sMEDELEG%s: 0x%08lx\n",
-		   prefix, suffix, csr_read(CSR_MEDELEG));
+	sbi_printf("%sMIDELEG%s: 0x%08lx\n", prefix, suffix,
+		   csr_read(CSR_MIDELEG));
+	sbi_printf("%sMEDELEG%s: 0x%08lx\n", prefix, suffix,
+		   csr_read(CSR_MEDELEG));
 #else
-	sbi_printf("%sMIDELEG%s: 0x%016lx\n",
-		   prefix, suffix, csr_read(CSR_MIDELEG));
-	sbi_printf("%sMEDELEG%s: 0x%016lx\n",
-		   prefix, suffix, csr_read(CSR_MEDELEG));
+	sbi_printf("%sMIDELEG%s: 0x%016lx\n", prefix, suffix,
+		   csr_read(CSR_MIDELEG));
+	sbi_printf("%sMEDELEG%s: 0x%016lx\n", prefix, suffix,
+		   csr_read(CSR_MEDELEG));
 #endif
 }
 
 unsigned int sbi_hart_mhpm_count(struct sbi_scratch *scratch)
 {
 	struct hart_features *hfeatures =
-			sbi_scratch_offset_ptr(scratch, hart_features_offset);
+		sbi_scratch_offset_ptr(scratch, hart_features_offset);
 
 	return hfeatures->mhpm_count;
 }
@@ -174,7 +173,7 @@ unsigned int sbi_hart_mhpm_count(struct sbi_scratch *scratch)
 unsigned int sbi_hart_pmp_count(struct sbi_scratch *scratch)
 {
 	struct hart_features *hfeatures =
-			sbi_scratch_offset_ptr(scratch, hart_features_offset);
+		sbi_scratch_offset_ptr(scratch, hart_features_offset);
 
 	return hfeatures->pmp_count;
 }
@@ -182,7 +181,7 @@ unsigned int sbi_hart_pmp_count(struct sbi_scratch *scratch)
 unsigned long sbi_hart_pmp_granularity(struct sbi_scratch *scratch)
 {
 	struct hart_features *hfeatures =
-			sbi_scratch_offset_ptr(scratch, hart_features_offset);
+		sbi_scratch_offset_ptr(scratch, hart_features_offset);
 
 	return hfeatures->pmp_gran;
 }
@@ -190,7 +189,7 @@ unsigned long sbi_hart_pmp_granularity(struct sbi_scratch *scratch)
 unsigned int sbi_hart_pmp_addrbits(struct sbi_scratch *scratch)
 {
 	struct hart_features *hfeatures =
-			sbi_scratch_offset_ptr(scratch, hart_features_offset);
+		sbi_scratch_offset_ptr(scratch, hart_features_offset);
 
 	return hfeatures->pmp_addr_bits;
 }
@@ -198,7 +197,7 @@ unsigned int sbi_hart_pmp_addrbits(struct sbi_scratch *scratch)
 unsigned int sbi_hart_mhpm_bits(struct sbi_scratch *scratch)
 {
 	struct hart_features *hfeatures =
-			sbi_scratch_offset_ptr(scratch, hart_features_offset);
+		sbi_scratch_offset_ptr(scratch, hart_features_offset);
 
 	return hfeatures->mhpm_bits;
 }
@@ -207,7 +206,7 @@ int sbi_hart_pmp_configure(struct sbi_scratch *scratch)
 {
 	struct sbi_domain_memregion *reg;
 	struct sbi_domain *dom = sbi_domain_thishart_ptr();
-	unsigned int pmp_idx = 0, pmp_flags, pmp_bits, pmp_gran_log2;
+	unsigned int pmp_idx   = 0, pmp_flags, pmp_bits, pmp_gran_log2;
 	unsigned int pmp_count = sbi_hart_pmp_count(scratch);
 	unsigned long pmp_addr = 0, pmp_addr_max = 0;
 
@@ -215,10 +214,11 @@ int sbi_hart_pmp_configure(struct sbi_scratch *scratch)
 		return 0;
 
 	pmp_gran_log2 = log2roundup(sbi_hart_pmp_granularity(scratch));
-	pmp_bits = sbi_hart_pmp_addrbits(scratch) - 1;
-	pmp_addr_max = (1UL << pmp_bits) | ((1UL << pmp_bits) - 1);
+	pmp_bits      = sbi_hart_pmp_addrbits(scratch) - 1;
+	pmp_addr_max  = (1UL << pmp_bits) | ((1UL << pmp_bits) - 1);
 
-	sbi_domain_for_each_memregion(dom, reg) {
+	sbi_domain_for_each_memregion(dom, reg)
+	{
 		if (pmp_count <= pmp_idx)
 			break;
 
@@ -232,13 +232,15 @@ int sbi_hart_pmp_configure(struct sbi_scratch *scratch)
 		if (reg->flags & SBI_DOMAIN_MEMREGION_MMODE)
 			pmp_flags |= PMP_L;
 
-		pmp_addr =  reg->base >> PMP_SHIFT;
+		pmp_addr = reg->base >> PMP_SHIFT;
 		if (pmp_gran_log2 <= reg->order && pmp_addr < pmp_addr_max)
 			pmp_set(pmp_idx++, pmp_flags, reg->base, reg->order);
 		else {
-			sbi_printf("Can not configure pmp for domain %s", dom->name);
-			sbi_printf("because memory region address %lx or size %lx is not in range\n",
-				    reg->base, reg->order);
+			sbi_printf("Can not configure pmp for domain %s",
+				   dom->name);
+			sbi_printf(
+				"because memory region address %lx or size %lx is not in range\n",
+				reg->base, reg->order);
 		}
 	}
 
@@ -255,7 +257,7 @@ int sbi_hart_pmp_configure(struct sbi_scratch *scratch)
 bool sbi_hart_has_feature(struct sbi_scratch *scratch, unsigned long feature)
 {
 	struct hart_features *hfeatures =
-			sbi_scratch_offset_ptr(scratch, hart_features_offset);
+		sbi_scratch_offset_ptr(scratch, hart_features_offset);
 
 	if (hfeatures->features & feature)
 		return true;
@@ -266,7 +268,7 @@ bool sbi_hart_has_feature(struct sbi_scratch *scratch, unsigned long feature)
 static unsigned long hart_get_features(struct sbi_scratch *scratch)
 {
 	struct hart_features *hfeatures =
-			sbi_scratch_offset_ptr(scratch, hart_features_offset);
+		sbi_scratch_offset_ptr(scratch, hart_features_offset);
 
 	return hfeatures->features;
 }
@@ -307,8 +309,8 @@ static inline char *sbi_hart_feature_id2string(unsigned long feature)
  * @param nfstr length of the features_str. The feature string will be truncated
  *		if nfstr is not long enough.
  */
-void sbi_hart_get_features_str(struct sbi_scratch *scratch,
-			       char *features_str, int nfstr)
+void sbi_hart_get_features_str(struct sbi_scratch *scratch, char *features_str,
+			       int nfstr)
 {
 	unsigned long features, feat = 1UL;
 	char *temp;
@@ -343,8 +345,8 @@ done:
 
 static unsigned long hart_pmp_get_allowed_addr(void)
 {
-	unsigned long val = 0;
-	struct sbi_trap_info trap = {0};
+	unsigned long val	  = 0;
+	struct sbi_trap_info trap = { 0 };
 
 	csr_write_allowed(CSR_PMPADDR0, (ulong)&trap, PMP_ADDR_MASK);
 	if (!trap.cause) {
@@ -358,9 +360,9 @@ static unsigned long hart_pmp_get_allowed_addr(void)
 
 static int hart_pmu_get_allowed_bits(void)
 {
-	unsigned long val = ~(0UL);
-	struct sbi_trap_info trap = {0};
-	int num_bits = 0;
+	unsigned long val	  = ~(0UL);
+	struct sbi_trap_info trap = { 0 };
+	int num_bits		  = 0;
 
 	/**
 	 * It is assumed that platforms will implement same number of bits for
@@ -389,53 +391,53 @@ static int hart_pmu_get_allowed_bits(void)
 
 static void hart_detect_features(struct sbi_scratch *scratch)
 {
-	struct sbi_trap_info trap = {0};
+	struct sbi_trap_info trap = { 0 };
 	struct hart_features *hfeatures;
 	unsigned long val;
 
 	/* Reset hart features */
 	hfeatures = sbi_scratch_offset_ptr(scratch, hart_features_offset);
-	hfeatures->features = 0;
-	hfeatures->pmp_count = 0;
+	hfeatures->features   = 0;
+	hfeatures->pmp_count  = 0;
 	hfeatures->mhpm_count = 0;
 
-#define __check_csr(__csr, __rdonly, __wrval, __field, __skip)	\
-	val = csr_read_allowed(__csr, (ulong)&trap);			\
-	if (!trap.cause) {						\
-		if (__rdonly) {						\
-			(hfeatures->__field)++;				\
-		} else {						\
-			csr_write_allowed(__csr, (ulong)&trap, __wrval);\
-			if (!trap.cause) {				\
-				if (csr_swap(__csr, val) == __wrval)	\
-					(hfeatures->__field)++;		\
-				else					\
-					goto __skip;			\
-			} else {					\
-				goto __skip;				\
-			}						\
-		}							\
-	} else {							\
-		goto __skip;						\
+#define __check_csr(__csr, __rdonly, __wrval, __field, __skip)           \
+	val = csr_read_allowed(__csr, (ulong)&trap);                     \
+	if (!trap.cause) {                                               \
+		if (__rdonly) {                                          \
+			(hfeatures->__field)++;                          \
+		} else {                                                 \
+			csr_write_allowed(__csr, (ulong)&trap, __wrval); \
+			if (!trap.cause) {                               \
+				if (csr_swap(__csr, val) == __wrval)     \
+					(hfeatures->__field)++;          \
+				else                                     \
+					goto __skip;                     \
+			} else {                                         \
+				goto __skip;                             \
+			}                                                \
+		}                                                        \
+	} else {                                                         \
+		goto __skip;                                             \
 	}
-#define __check_csr_2(__csr, __rdonly, __wrval, __field, __skip)	\
-	__check_csr(__csr + 0, __rdonly, __wrval, __field, __skip)	\
-	__check_csr(__csr + 1, __rdonly, __wrval, __field, __skip)
-#define __check_csr_4(__csr, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_2(__csr + 0, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_2(__csr + 2, __rdonly, __wrval, __field, __skip)
-#define __check_csr_8(__csr, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_4(__csr + 0, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_4(__csr + 4, __rdonly, __wrval, __field, __skip)
-#define __check_csr_16(__csr, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_8(__csr + 0, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_8(__csr + 8, __rdonly, __wrval, __field, __skip)
-#define __check_csr_32(__csr, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_16(__csr + 0, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_16(__csr + 16, __rdonly, __wrval, __field, __skip)
-#define __check_csr_64(__csr, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_32(__csr + 0, __rdonly, __wrval, __field, __skip)	\
-	__check_csr_32(__csr + 32, __rdonly, __wrval, __field, __skip)
+#define __check_csr_2(__csr, __rdonly, __wrval, __field, __skip)   \
+	__check_csr(__csr + 0, __rdonly, __wrval, __field, __skip) \
+		__check_csr(__csr + 1, __rdonly, __wrval, __field, __skip)
+#define __check_csr_4(__csr, __rdonly, __wrval, __field, __skip)     \
+	__check_csr_2(__csr + 0, __rdonly, __wrval, __field, __skip) \
+		__check_csr_2(__csr + 2, __rdonly, __wrval, __field, __skip)
+#define __check_csr_8(__csr, __rdonly, __wrval, __field, __skip)     \
+	__check_csr_4(__csr + 0, __rdonly, __wrval, __field, __skip) \
+		__check_csr_4(__csr + 4, __rdonly, __wrval, __field, __skip)
+#define __check_csr_16(__csr, __rdonly, __wrval, __field, __skip)    \
+	__check_csr_8(__csr + 0, __rdonly, __wrval, __field, __skip) \
+		__check_csr_8(__csr + 8, __rdonly, __wrval, __field, __skip)
+#define __check_csr_32(__csr, __rdonly, __wrval, __field, __skip)     \
+	__check_csr_16(__csr + 0, __rdonly, __wrval, __field, __skip) \
+		__check_csr_16(__csr + 16, __rdonly, __wrval, __field, __skip)
+#define __check_csr_64(__csr, __rdonly, __wrval, __field, __skip)     \
+	__check_csr_32(__csr + 0, __rdonly, __wrval, __field, __skip) \
+		__check_csr_32(__csr + 32, __rdonly, __wrval, __field, __skip)
 
 	/**
 	 * Detect the allowed address bits & granularity. At least PMPADDR0
@@ -443,7 +445,7 @@ static void hart_detect_features(struct sbi_scratch *scratch)
 	 */
 	val = hart_pmp_get_allowed_addr();
 	if (val) {
-		hfeatures->pmp_gran =  1 << (__ffs(val) + 2);
+		hfeatures->pmp_gran	 = 1 << (__ffs(val) + 2);
 		hfeatures->pmp_addr_bits = __fls(val) + 1;
 		/* Detect number of PMP regions. At least PMPADDR0 should be implemented*/
 		__check_csr_64(CSR_PMPADDR0, 0, val, pmp_count, __pmp_skip);
@@ -526,8 +528,8 @@ int sbi_hart_init(struct sbi_scratch *scratch, bool cold_boot)
 		if (misa_extension('H'))
 			sbi_hart_expected_trap = &__sbi_expected_trap_hext;
 
-		hart_features_offset = sbi_scratch_alloc_offset(
-						sizeof(struct hart_features));
+		hart_features_offset =
+			sbi_scratch_alloc_offset(sizeof(struct hart_features));
 		if (!hart_features_offset)
 			return SBI_ENOMEM;
 	}

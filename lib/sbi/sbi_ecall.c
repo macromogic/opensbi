@@ -12,6 +12,9 @@
 #include <sbi/sbi_ecall_interface.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_trap.h>
+#include <sbi/riscv_encoding.h>
+#include <sbi/riscv_asm.h>
+#include <sbi/sbi_ecall_ebi_enclave.h>
 
 u16 sbi_ecall_version_major(void)
 {
@@ -41,7 +44,8 @@ struct sbi_ecall_extension *sbi_ecall_find_extension(unsigned long extid)
 {
 	struct sbi_ecall_extension *t, *ret = NULL;
 
-	sbi_list_for_each_entry(t, &ecall_exts_list, head) {
+	sbi_list_for_each_entry(t, &ecall_exts_list, head)
+	{
 		if (t->extid_start <= extid && extid <= t->extid_end) {
 			ret = t;
 			break;
@@ -58,9 +62,10 @@ int sbi_ecall_register_extension(struct sbi_ecall_extension *ext)
 	if (!ext || (ext->extid_end < ext->extid_start) || !ext->handle)
 		return SBI_EINVAL;
 
-	sbi_list_for_each_entry(t, &ecall_exts_list, head) {
+	sbi_list_for_each_entry(t, &ecall_exts_list, head)
+	{
 		unsigned long start = t->extid_start;
-		unsigned long end = t->extid_end;
+		unsigned long end   = t->extid_end;
 		if (end < ext->extid_start || ext->extid_end < start)
 			/* no overlap */;
 		else
@@ -81,7 +86,8 @@ void sbi_ecall_unregister_extension(struct sbi_ecall_extension *ext)
 	if (!ext)
 		return;
 
-	sbi_list_for_each_entry(t, &ecall_exts_list, head) {
+	sbi_list_for_each_entry(t, &ecall_exts_list, head)
+	{
 		if (t == ext) {
 			found = TRUE;
 			break;
@@ -97,20 +103,45 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 	int ret = 0;
 	struct sbi_ecall_extension *ext;
 	unsigned long extension_id = regs->a7;
-	unsigned long func_id = regs->a6;
-	struct sbi_trap_info trap = {0};
-	unsigned long out_val = 0;
-	bool is_0_1_spec = 0;
+	unsigned long func_id	   = regs->a6;
+	struct sbi_trap_info trap  = { 0 };
+	unsigned long out_val	   = 0;
+	bool is_0_1_spec	   = 0;
+
+	if (extension_id == SBI_EXT_EBI) {
+		sbi_printf(
+			"[sbi_ecall_handler] Calling EBI with function ID=%lu\n",
+			func_id);
+	}
+
+	ulong mcause	= csr_read(CSR_MCAUSE);
+	ulong mtval	= csr_read(CSR_MTVAL);
+	ulong mtval2	= 0;
+	ulong mtinst	= 0;
+	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
+	if (prev_mode == 0 && extension_id != SBI_EXT_EBI) {
+		// The U-mode ecall is a system call if a7 is not SBI_EXT_EBI
+		trap.epc   = regs->mepc;
+		trap.cause = mcause;
+		trap.tval  = mtval;
+		trap.tval2 = mtval2;
+		trap.tinst = mtinst;
+		sbi_trap_redirect(regs, &trap);
+		return 0;
+	}
 
 	ext = sbi_ecall_find_extension(extension_id);
 	if (ext && ext->handle) {
-		ret = ext->handle(extension_id, func_id,
-				  regs, &out_val, &trap);
+		ret = ext->handle(extension_id, func_id, regs, &out_val, &trap);
 		if (extension_id >= SBI_EXT_0_1_SET_TIMER &&
 		    extension_id <= SBI_EXT_0_1_SHUTDOWN)
 			is_0_1_spec = 1;
 	} else {
 		ret = SBI_ENOTSUPP;
+	}
+
+	if (extension_id == SBI_EXT_EBI) {
+		sbi_printf("[sbi_ecall_handler] EBI ret = %d\n", ret);
 	}
 
 	if (ret == SBI_ETRAP) {
@@ -119,8 +150,8 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 	} else {
 		if (ret < SBI_LAST_ERR) {
 			sbi_printf("%s: Invalid error %d for ext=0x%lx "
-				   "func=0x%lx\n", __func__, ret,
-				   extension_id, func_id);
+				   "func=0x%lx\n",
+				   __func__, ret, extension_id, func_id);
 			ret = SBI_ERR_FAILED;
 		}
 
@@ -134,7 +165,7 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		 */
 		regs->mepc += 4;
 		regs->a0 = ret;
-		if (!is_0_1_spec)
+		if (!is_0_1_spec && extension_id != SBI_EXT_EBI)
 			regs->a1 = out_val;
 	}
 
@@ -173,6 +204,11 @@ int sbi_ecall_init(void)
 	ret = sbi_ecall_register_extension(&ecall_vendor);
 	if (ret)
 		return ret;
-
+	ret = sbi_ecall_register_extension(&ecall_ebi);
+	init_enclaves();
+	sbi_printf("############### init ecall_ebi successfully\n");
+	sbi_printf("ecall_ebi: %p\n", ecall_ebi.handle);
+	if (ret)
+		return ret;
 	return 0;
 }

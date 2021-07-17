@@ -92,3 +92,15 @@
 	. = ALIGN(0x1000); /* Need this to create proper sections */
 
 	PROVIDE(_fw_end = .);
+
+	/* TODO(change the lds, to insert our drivers) */
+
+	.drvbase :
+	{
+		*(.drvbase)
+	}
+
+	.drvconsole :
+	{
+		*(.drvconsole)
+	}

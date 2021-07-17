@@ -25,9 +25,10 @@
 #include <sbi/sbi_timer.h>
 #include <sbi/sbi_tlb.h>
 #include <sbi/sbi_version.h>
+#include <sbi/sbi_ecall_ebi_enclave.h>
 
 #define BANNER                                              \
-	"   ____                    _____ ____ _____\n"     \
+	"   ____     SUSTech-COMPASS  _____ ____ _____\n"   \
 	"  / __ \\                  / ____|  _ \\_   _|\n"  \
 	" | |  | |_ __   ___ _ __ | (___ | |_) || |\n"      \
 	" | |  | | '_ \\ / _ \\ '_ \\ \\___ \\|  _ < | |\n" \
@@ -65,8 +66,7 @@ static void sbi_boot_print_general(struct sbi_scratch *scratch)
 		return;
 
 	/* Platform details */
-	sbi_printf("Platform Name             : %s\n",
-		   sbi_platform_name(plat));
+	sbi_printf("Platform Name             : %s\n", sbi_platform_name(plat));
 	sbi_platform_get_features_str(plat, str, sizeof(str));
 	sbi_printf("Platform Features         : %s\n", str);
 	sbi_printf("Platform HART Count       : %u\n",
@@ -141,7 +141,7 @@ static void sbi_boot_print_hart(struct sbi_scratch *scratch, u32 hartid)
 	sbi_hart_delegation_dump(scratch, "Boot HART ", "         ");
 }
 
-static spinlock_t coldboot_lock = SPIN_LOCK_INITIALIZER;
+static spinlock_t coldboot_lock		       = SPIN_LOCK_INITIALIZER;
 static struct sbi_hartmask coldboot_wait_hmask = { 0 };
 
 static unsigned long coldboot_done;
@@ -170,7 +170,7 @@ static void wait_for_coldboot(struct sbi_scratch *scratch, u32 hartid)
 		do {
 			wfi();
 			cmip = csr_read(CSR_MIP);
-		 } while (!(cmip & MIP_MSIP));
+		} while (!(cmip & MIP_MSIP));
 	};
 
 	/* Acquire coldboot lock */
@@ -299,8 +299,8 @@ static void __noreturn init_coldboot(struct sbi_scratch *scratch, u32 hartid)
 	 */
 	rc = sbi_domain_finalize(scratch, hartid);
 	if (rc) {
-		sbi_printf("%s: domain finalize failed (error %d)\n",
-			   __func__, rc);
+		sbi_printf("%s: domain finalize failed (error %d)\n", __func__,
+			   rc);
 		sbi_hart_hang();
 	}
 
@@ -308,8 +308,8 @@ static void __noreturn init_coldboot(struct sbi_scratch *scratch, u32 hartid)
 
 	rc = sbi_hart_pmp_configure(scratch);
 	if (rc) {
-		sbi_printf("%s: PMP configure failed (error %d)\n",
-			   __func__, rc);
+		sbi_printf("%s: PMP configure failed (error %d)\n", __func__,
+			   rc);
 		sbi_hart_hang();
 	}
 
@@ -423,8 +423,7 @@ static void __noreturn init_warmboot(struct sbi_scratch *scratch, u32 hartid)
 	else
 		init_warm_startup(scratch, hartid);
 
-	sbi_hart_switch_mode(hartid, scratch->next_arg1,
-			     scratch->next_addr,
+	sbi_hart_switch_mode(hartid, scratch->next_arg1, scratch->next_addr,
 			     scratch->next_mode, FALSE);
 }
 
