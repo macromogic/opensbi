@@ -239,6 +239,8 @@ struct sbi_trap_regs *sbi_trap_handler(struct sbi_trap_regs *regs)
 		return regs;
 	}
 
+	sbi_printf("[sbi_trap_handler] mcause=%lx\n", mcause);
+
 	switch (mcause) {
 	case CAUSE_ILLEGAL_INSTRUCTION:
 		rc  = sbi_illegal_insn_handler(mtval, regs);
