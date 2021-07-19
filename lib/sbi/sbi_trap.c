@@ -239,8 +239,6 @@ struct sbi_trap_regs *sbi_trap_handler(struct sbi_trap_regs *regs)
 		return regs;
 	}
 
-	sbi_printf("[sbi_trap_handler] mcause=%lx\n", mcause);
-
 	switch (mcause) {
 	case CAUSE_ILLEGAL_INSTRUCTION:
 		rc  = sbi_illegal_insn_handler(mtval, regs);
@@ -257,7 +255,10 @@ struct sbi_trap_regs *sbi_trap_handler(struct sbi_trap_regs *regs)
 	case CAUSE_SUPERVISOR_ECALL:
 	case CAUSE_MACHINE_ECALL:
 	case CAUSE_USER_ECALL:
-		rc  = sbi_ecall_handler(regs);
+		rc = sbi_ecall_handler(regs);
+		if (rc != 0)
+			sbi_printf("[sbi_trap_handler] mcause=0x%lx, rc=%d\n",
+				   mcause, rc);
 		msg = "ecall handler failed";
 		break;
 	case CAUSE_LOAD_ACCESS:
