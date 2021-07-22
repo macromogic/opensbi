@@ -9,3 +9,9 @@ install/
 
 # Development friendly files
 tags
+
+
+.vscode
+*.sh
+*.py
+screenlog.0
