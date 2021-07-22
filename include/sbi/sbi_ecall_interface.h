@@ -28,6 +28,7 @@
 #define SBI_EXT_RFENCE				0x52464E43
 #define SBI_EXT_HSM				0x48534D
 #define SBI_EXT_SRST				0x53525354
+#define SBI_EXT_EBI				0x19260817
 
 /* SBI function IDs for BASE extension*/
 #define SBI_EXT_BASE_GET_SPEC_VERSION		0x0
@@ -92,6 +93,18 @@
 #define SBI_ERR_ALREADY_AVAILABLE		-6
 
 #define SBI_LAST_ERR				SBI_ERR_ALREADY_AVAILABLE
+
+/* SBI function IDs for EBI extension*/
+#define SBI_EXT_EBI_START   398
+#define SBI_EXT_EBI_CREATE  399
+#define SBI_EXT_EBI_ENTER   400
+#define SBI_EXT_EBI_EXIT    401
+#define SBI_EXT_EBI_GOTO    402
+#define SBI_EXT_EBI_FETCH   403
+#define SBI_EXT_EBI_RELEASE 404
+
+#define SBI_EXT_EBI_PUTS    410
+#define SBI_EXT_EBI_GETS    411
 
 /* clang-format on */
 
