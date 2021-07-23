@@ -333,12 +333,12 @@ void init_enclaves(void)
 	sbi_printf("[EBI] enclaves init successfully!");
 }
 
-uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
+uintptr_t create_enclave(const struct sbi_trap_regs *regs, uintptr_t mepc)
 {
 	uintptr_t payload_addr;
-	payload_addr		 = args[0];
-	size_t payload_size	 = args[1];
-	uintptr_t driver_bitmask = args[2];
+	payload_addr		 = regs->a0;
+	size_t payload_size	 = regs->a1;
+	uintptr_t driver_bitmask = regs->a2;
 
 	sbi_printf("[create_enclave] user_payload_addr = 0x%lx\n",
 		   payload_addr);
@@ -397,9 +397,9 @@ uintptr_t create_enclave(uintptr_t *args, uintptr_t mepc)
 }
 
 // regs changed to args
-uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
+uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 {
-	uintptr_t id	      = args[0];
+	uintptr_t id	      = regs->a0;
 	enclave_context *into = &enclaves[id], *from = &enclaves[NUM_ENCLAVE];
 
 	sbi_printf("[enter_enclave] log1\n");
@@ -407,9 +407,7 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 		return EBI_ERROR;
 
 	sbi_printf("[enter_enclave] log2\n");
-	memcpy_from_user(args[2], into->user_param, args[1], mepc);
-
-	struct sbi_trap_regs *regs = (struct sbi_trap_regs *)args[5];
+	memcpy_from_user(regs->a2, into->user_param, regs->a1, mepc);
 
 	sbi_printf("[enter_enclave] log3\n");
 	pmp_switch(into);
@@ -420,8 +418,7 @@ uintptr_t enter_enclave(uintptr_t *args, uintptr_t mepc)
 
 	/* User parameter */
 	/* argc and argv */
-	//TODO: args --> regs
-	regs->a4 = args[1];
+	regs->a4 = regs->a0;
 	regs->a5 = into->user_param;
 
 	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);

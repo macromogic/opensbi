@@ -767,3 +767,20 @@ fw_fdt_bin:
 	.fill FW_FDT_PADDING, 1, 0
 #endif
 #endif
+
+  .section ".drvbase","a",@progbits
+
+.align 19
+
+  .globl _base_start, _base_end
+_base_start:
+  .incbin "emodule_base"
+_base_end:
+
+  .section ".drvconsole","a",@progbits
+.align 19
+
+  .globl _console_start, _console_end
+_console_start:
+  .incbin "drv_console"
+_console_end:
