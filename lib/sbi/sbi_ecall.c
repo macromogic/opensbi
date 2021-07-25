@@ -164,11 +164,18 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		 * accordingly for now. Once fatal errors are defined, that
 		 * case should be handled differently.
 		 */
+		if (extension_id == SBI_EXT_EBI)
+			sbi_printf("[sbi_ecall_handler] Ding\n");
 		regs->mepc += 4;
 		regs->a0 = ret;
 		if (!is_0_1_spec)
 			regs->a1 = out_val;
+		if (extension_id == SBI_EXT_EBI)
+			sbi_printf("[sbi_ecall_handler] Dong\n");
 	}
+
+	if (extension_id == SBI_EXT_EBI)
+		sbi_printf("[sbi_ecall_handler] Ret\n");
 
 	return 0;
 }
