@@ -268,7 +268,8 @@ void sbi_trap_handler(struct sbi_trap_regs *regs)
 		break;
 	};
 
-	sbi_printf("[sbi_trap_handler] rc = %d\n", rc);
+	// if (regs->a7 == 0x19260817)
+	// 	sbi_printf("[sbi_trap_handler] rc = %d\n", rc);
 
 trap_error:
 	if (rc)

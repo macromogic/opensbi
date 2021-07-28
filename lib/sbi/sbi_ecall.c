@@ -174,8 +174,11 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 			sbi_printf("[sbi_ecall_handler] Dong\n");
 	}
 
-	if (extension_id == SBI_EXT_EBI)
+	if (extension_id == SBI_EXT_EBI) {
 		sbi_printf("[sbi_ecall_handler] Ret\n");
+		sbi_printf("[sbi_ecall_handler] mepc=%lx, mstatus=%lx\n",
+			   csr_read(CSR_MEPC), csr_read(CSR_MSTATUS));
+	}
 
 	return 0;
 }
