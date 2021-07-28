@@ -268,6 +268,8 @@ void sbi_trap_handler(struct sbi_trap_regs *regs)
 		break;
 	};
 
+	sbi_printf("[sbi_trap_handler] rc = %d\n", rc);
+
 trap_error:
 	if (rc)
 		sbi_trap_error(msg, rc, mcause, mtval, mtval2, mtinst, regs);
