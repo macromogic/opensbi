@@ -35,16 +35,15 @@ int misa_xlen(void)
 	if (csr_read(CSR_MISA) == 0)
 		return sbi_platform_misa_xlen(sbi_platform_thishart_ptr());
 
-	__asm__ __volatile__(
-		"csrr   t0, misa\n\t"
-		"slti   t1, t0, 0\n\t"
-		"slli   t1, t1, 1\n\t"
-		"slli   t0, t0, 1\n\t"
-		"slti   t0, t0, 0\n\t"
-		"add    %0, t0, t1"
-		: "=r"(r)
-		:
-		: "t0", "t1");
+	__asm__ __volatile__("csrr   t0, misa\n\t"
+			     "slti   t1, t0, 0\n\t"
+			     "slli   t1, t1, 1\n\t"
+			     "slli   t0, t0, 1\n\t"
+			     "slti   t0, t0, 0\n\t"
+			     "add    %0, t0, t1"
+			     : "=r"(r)
+			     :
+			     : "t0", "t1");
 
 	return r ? r : -1;
 }
@@ -90,36 +89,35 @@ void misa_string(int xlen, char *out, unsigned int out_sz)
 
 unsigned long csr_read_num(int csr_num)
 {
-#define switchcase_csr_read(__csr_num, __val)		\
-	case __csr_num:					\
-		__val = csr_read(__csr_num);		\
+#define switchcase_csr_read(__csr_num, __val) \
+	case __csr_num:                       \
+		__val = csr_read(__csr_num);  \
 		break;
-#define switchcase_csr_read_2(__csr_num, __val)	\
-	switchcase_csr_read(__csr_num + 0, __val)	\
-	switchcase_csr_read(__csr_num + 1, __val)
-#define switchcase_csr_read_4(__csr_num, __val)	\
-	switchcase_csr_read_2(__csr_num + 0, __val)	\
-	switchcase_csr_read_2(__csr_num + 2, __val)
-#define switchcase_csr_read_8(__csr_num, __val)	\
-	switchcase_csr_read_4(__csr_num + 0, __val)	\
-	switchcase_csr_read_4(__csr_num + 4, __val)
-#define switchcase_csr_read_16(__csr_num, __val)	\
-	switchcase_csr_read_8(__csr_num + 0, __val)	\
-	switchcase_csr_read_8(__csr_num + 8, __val)
-#define switchcase_csr_read_32(__csr_num, __val)	\
-	switchcase_csr_read_16(__csr_num + 0, __val)	\
-	switchcase_csr_read_16(__csr_num + 16, __val)
-#define switchcase_csr_read_64(__csr_num, __val)	\
-	switchcase_csr_read_32(__csr_num + 0, __val)	\
-	switchcase_csr_read_32(__csr_num + 32, __val)
+#define switchcase_csr_read_2(__csr_num, __val)   \
+	switchcase_csr_read(__csr_num + 0, __val) \
+		switchcase_csr_read(__csr_num + 1, __val)
+#define switchcase_csr_read_4(__csr_num, __val)     \
+	switchcase_csr_read_2(__csr_num + 0, __val) \
+		switchcase_csr_read_2(__csr_num + 2, __val)
+#define switchcase_csr_read_8(__csr_num, __val)     \
+	switchcase_csr_read_4(__csr_num + 0, __val) \
+		switchcase_csr_read_4(__csr_num + 4, __val)
+#define switchcase_csr_read_16(__csr_num, __val)    \
+	switchcase_csr_read_8(__csr_num + 0, __val) \
+		switchcase_csr_read_8(__csr_num + 8, __val)
+#define switchcase_csr_read_32(__csr_num, __val)     \
+	switchcase_csr_read_16(__csr_num + 0, __val) \
+		switchcase_csr_read_16(__csr_num + 16, __val)
+#define switchcase_csr_read_64(__csr_num, __val)     \
+	switchcase_csr_read_32(__csr_num + 0, __val) \
+		switchcase_csr_read_32(__csr_num + 32, __val)
 
 	unsigned long ret = 0;
 
 	switch (csr_num) {
-	switchcase_csr_read_16(CSR_PMPCFG0, ret)
-	switchcase_csr_read_64(CSR_PMPADDR0, ret)
-	default:
-		break;
+		switchcase_csr_read_16(CSR_PMPCFG0, ret)
+			switchcase_csr_read_64(CSR_PMPADDR0, ret) default
+		    : break;
 	};
 
 	return ret;
@@ -135,34 +133,33 @@ unsigned long csr_read_num(int csr_num)
 
 void csr_write_num(int csr_num, unsigned long val)
 {
-#define switchcase_csr_write(__csr_num, __val)		\
-	case __csr_num:					\
-		csr_write(__csr_num, __val);		\
+#define switchcase_csr_write(__csr_num, __val) \
+	case __csr_num:                        \
+		csr_write(__csr_num, __val);   \
 		break;
-#define switchcase_csr_write_2(__csr_num, __val)	\
-	switchcase_csr_write(__csr_num + 0, __val)	\
-	switchcase_csr_write(__csr_num + 1, __val)
-#define switchcase_csr_write_4(__csr_num, __val)	\
-	switchcase_csr_write_2(__csr_num + 0, __val)	\
-	switchcase_csr_write_2(__csr_num + 2, __val)
-#define switchcase_csr_write_8(__csr_num, __val)	\
-	switchcase_csr_write_4(__csr_num + 0, __val)	\
-	switchcase_csr_write_4(__csr_num + 4, __val)
-#define switchcase_csr_write_16(__csr_num, __val)	\
-	switchcase_csr_write_8(__csr_num + 0, __val)	\
-	switchcase_csr_write_8(__csr_num + 8, __val)
-#define switchcase_csr_write_32(__csr_num, __val)	\
-	switchcase_csr_write_16(__csr_num + 0, __val)	\
-	switchcase_csr_write_16(__csr_num + 16, __val)
-#define switchcase_csr_write_64(__csr_num, __val)	\
-	switchcase_csr_write_32(__csr_num + 0, __val)	\
-	switchcase_csr_write_32(__csr_num + 32, __val)
+#define switchcase_csr_write_2(__csr_num, __val)   \
+	switchcase_csr_write(__csr_num + 0, __val) \
+		switchcase_csr_write(__csr_num + 1, __val)
+#define switchcase_csr_write_4(__csr_num, __val)     \
+	switchcase_csr_write_2(__csr_num + 0, __val) \
+		switchcase_csr_write_2(__csr_num + 2, __val)
+#define switchcase_csr_write_8(__csr_num, __val)     \
+	switchcase_csr_write_4(__csr_num + 0, __val) \
+		switchcase_csr_write_4(__csr_num + 4, __val)
+#define switchcase_csr_write_16(__csr_num, __val)    \
+	switchcase_csr_write_8(__csr_num + 0, __val) \
+		switchcase_csr_write_8(__csr_num + 8, __val)
+#define switchcase_csr_write_32(__csr_num, __val)     \
+	switchcase_csr_write_16(__csr_num + 0, __val) \
+		switchcase_csr_write_16(__csr_num + 16, __val)
+#define switchcase_csr_write_64(__csr_num, __val)     \
+	switchcase_csr_write_32(__csr_num + 0, __val) \
+		switchcase_csr_write_32(__csr_num + 32, __val)
 
 	switch (csr_num) {
-	switchcase_csr_write_16(CSR_PMPCFG0, val)
-	switchcase_csr_write_64(CSR_PMPADDR0, val)
-	default:
-		break;
+		switchcase_csr_write_16(CSR_PMPCFG0, val)
+			switchcase_csr_write_64(CSR_PMPADDR0, val) default
+		    : break;
 	};
 
 #undef switchcase_csr_write_64
@@ -189,7 +186,7 @@ static unsigned long ctz(unsigned long x)
 int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	    unsigned long log2len)
 {
-	int pmpcfg_csr, pmpcfg_shift, pmpaddr_csr;
+	int pmpcfg_csr, pmpcfg_shift; // , pmpaddr_csr;
 	unsigned long cfgmask, pmpcfg;
 	unsigned long addrmask, pmpaddr;
 
@@ -197,7 +194,7 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	if (n >= PMP_COUNT || log2len > __riscv_xlen || log2len < PMP_SHIFT)
 		return SBI_EINVAL;
 
-	/* calculate PMP register and offset */
+		/* calculate PMP register and offset */
 #if __riscv_xlen == 32
 	pmpcfg_csr   = CSR_PMPCFG0 + (n >> 2);
 	pmpcfg_shift = (n & 3) << 3;
@@ -208,9 +205,9 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	pmpcfg_csr   = -1;
 	pmpcfg_shift = -1;
 #endif
-	pmpaddr_csr = CSR_PMPADDR0 + n;
-	if (pmpcfg_csr < 0 || pmpcfg_shift < 0)
-		return SBI_ENOTSUPP;
+	// pmpaddr_csr = CSR_PMPADDR0 + n;
+	// if (pmpcfg_csr < 0 || pmpcfg_shift < 0)
+	// 	return SBI_ENOTSUPP;
 
 	/* encode PMP config */
 	prot |= (log2len == PMP_SHIFT) ? PMP_A_NA4 : PMP_A_NAPOT;
@@ -232,8 +229,8 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	}
 
 	/* write csrs */
-	csr_write_num(pmpaddr_csr, pmpaddr);
-	csr_write_num(pmpcfg_csr, pmpcfg);
+	// csr_write_num(pmpaddr_csr, pmpaddr);
+	// csr_write_num(pmpcfg_csr, pmpcfg);
 
 	return 0;
 }
@@ -274,22 +271,22 @@ int pmp_get(unsigned int n, unsigned long *prot_out, unsigned long *addr_out,
 	if ((prot & PMP_A) == PMP_A_NAPOT) {
 		addr = csr_read_num(pmpaddr_csr);
 		if (addr == -1UL) {
-			addr	= 0;
-			len	= __riscv_xlen;
+			addr = 0;
+			len  = __riscv_xlen;
 		} else {
-			t1	= ctz(~addr);
-			addr	= (addr & ~((1UL << t1) - 1)) << PMP_SHIFT;
-			len	= (t1 + PMP_SHIFT + 1);
+			t1   = ctz(~addr);
+			addr = (addr & ~((1UL << t1) - 1)) << PMP_SHIFT;
+			len  = (t1 + PMP_SHIFT + 1);
 		}
 	} else {
-		addr	= csr_read_num(pmpaddr_csr) << PMP_SHIFT;
-		len	= PMP_SHIFT;
+		addr = csr_read_num(pmpaddr_csr) << PMP_SHIFT;
+		len  = PMP_SHIFT;
 	}
 
 	/* return details */
-	*prot_out    = prot;
-	*addr_out    = addr;
-	*log2len     = len;
+	*prot_out = prot;
+	*addr_out = addr;
+	*log2len  = len;
 
 	return 0;
 }
