@@ -186,7 +186,7 @@ static unsigned long ctz(unsigned long x)
 int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	    unsigned long log2len)
 {
-	int pmpcfg_csr, pmpcfg_shift; // , pmpaddr_csr;
+	int pmpcfg_csr, pmpcfg_shift, pmpaddr_csr;
 	unsigned long cfgmask, pmpcfg;
 	unsigned long addrmask, pmpaddr;
 
@@ -205,9 +205,9 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	pmpcfg_csr   = -1;
 	pmpcfg_shift = -1;
 #endif
-	// pmpaddr_csr = CSR_PMPADDR0 + n;
-	// if (pmpcfg_csr < 0 || pmpcfg_shift < 0)
-	// 	return SBI_ENOTSUPP;
+	pmpaddr_csr = CSR_PMPADDR0 + n;
+	if (pmpcfg_csr < 0 || pmpcfg_shift < 0)
+		return SBI_ENOTSUPP;
 
 	/* encode PMP config */
 	prot |= (log2len == PMP_SHIFT) ? PMP_A_NA4 : PMP_A_NAPOT;
@@ -229,8 +229,8 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	}
 
 	/* write csrs */
-	// csr_write_num(pmpaddr_csr, pmpaddr);
-	// csr_write_num(pmpcfg_csr, pmpcfg);
+	csr_write_num(pmpaddr_csr, pmpaddr);
+	csr_write_num(pmpcfg_csr, pmpcfg);
 
 	return 0;
 }
