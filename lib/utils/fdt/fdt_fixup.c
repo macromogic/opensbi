@@ -32,7 +32,8 @@ void fdt_cpu_fixup(void *fdt)
 	if (cpus_offset < 0)
 		return;
 
-	fdt_for_each_subnode(cpu_offset, fdt, cpus_offset) {
+	fdt_for_each_subnode(cpu_offset, fdt, cpus_offset)
+	{
 		err = fdt_parse_hart_id(fdt, cpu_offset, &hartid);
 		if (err)
 			continue;
@@ -44,8 +45,8 @@ void fdt_cpu_fixup(void *fdt)
 		 */
 
 		mmu_type = fdt_getprop(fdt, cpu_offset, "mmu-type", &len);
-		if (!sbi_domain_is_assigned_hart(dom, hartid) ||
-		    !mmu_type || !len)
+		if (!sbi_domain_is_assigned_hart(dom, hartid) || !mmu_type ||
+		    !len)
 			fdt_setprop_string(fdt, cpu_offset, "status",
 					   "disabled");
 	}
@@ -61,8 +62,8 @@ void fdt_plic_fixup(void *fdt, const char *compat)
 	if (plic_off < 0)
 		return;
 
-	cells = (u32 *)fdt_getprop(fdt, plic_off,
-				   "interrupts-extended", &cells_count);
+	cells = (u32 *)fdt_getprop(fdt, plic_off, "interrupts-extended",
+				   &cells_count);
 	if (!cells)
 		return;
 
@@ -90,17 +91,15 @@ static int fdt_resv_memory_update_node(void *fdt, unsigned long addr,
 	char name[32];
 
 	addr_high = (u64)addr >> 32;
-	addr_low = addr;
+	addr_low  = addr;
 	size_high = (u64)size >> 32;
-	size_low = size;
+	size_low  = size;
 
 	if (na > 1 && addr_high)
-		sbi_snprintf(name, sizeof(name),
-			     "mmode_resv%d@%x,%x", index,
+		sbi_snprintf(name, sizeof(name), "mmode_resv%d@%x,%x", index,
 			     addr_high, addr_low);
 	else
-		sbi_snprintf(name, sizeof(name),
-			     "mmode_resv%d@%x", index,
+		sbi_snprintf(name, sizeof(name), "mmode_resv%d@%x", index,
 			     addr_low);
 
 	subnode = fdt_add_subnode(fdt, parent, name);
@@ -153,12 +152,12 @@ static int fdt_resv_memory_update_node(void *fdt, unsigned long addr,
 int fdt_reserved_memory_fixup(void *fdt)
 {
 	struct sbi_domain_memregion *reg;
-	struct sbi_domain *dom = sbi_domain_thishart_ptr();
+	struct sbi_domain *dom	    = sbi_domain_thishart_ptr();
 	struct sbi_scratch *scratch = sbi_scratch_thishart_ptr();
 	unsigned long addr, size;
 	int err, parent, i;
 	int na = fdt_address_cells(fdt, 0);
-	int ns = fdt_size_cells(fdt, 0);
+	int ns = 32; // fdt_size_cells(fdt, 0);
 
 	/*
 	 * Expand the device tree to accommodate new node
@@ -210,7 +209,8 @@ int fdt_reserved_memory_fixup(void *fdt)
 	 */
 
 	i = 0;
-	sbi_domain_for_each_memregion(dom, reg) {
+	sbi_domain_for_each_memregion(dom, reg)
+	{
 		/* Ignore MMIO or READABLE or WRITABLE or EXECUTABLE regions */
 		if (reg->flags & SBI_DOMAIN_MEMREGION_MMIO)
 			continue;
@@ -223,7 +223,8 @@ int fdt_reserved_memory_fixup(void *fdt)
 
 		addr = reg->base;
 		size = 1UL << reg->order;
-		fdt_resv_memory_update_node(fdt, addr, size, i, parent,
+		fdt_resv_memory_update_node(
+			fdt, addr, size, i, parent,
 			(sbi_hart_pmp_count(scratch)) ? false : true);
 		i++;
 	}
@@ -241,7 +242,8 @@ int fdt_reserved_memory_nomap_fixup(void *fdt)
 	if (parent < 0)
 		return parent;
 
-	fdt_for_each_subnode(subnode, fdt, parent) {
+	fdt_for_each_subnode(subnode, fdt, parent)
+	{
 		/*
 		 * Tell operating system not to create a virtual
 		 * mapping of the region as part of its standard
@@ -261,5 +263,3 @@ void fdt_fixups(void *fdt)
 
 	fdt_reserved_memory_fixup(fdt);
 }
-
-
