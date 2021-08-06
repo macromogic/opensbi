@@ -157,7 +157,7 @@ int fdt_reserved_memory_fixup(void *fdt)
 	unsigned long addr, size;
 	int err, parent, i;
 	int na = fdt_address_cells(fdt, 0);
-	int ns = 32; // fdt_size_cells(fdt, 0);
+	int ns = fdt_size_cells(fdt, 0);
 
 	/*
 	 * Expand the device tree to accommodate new node
