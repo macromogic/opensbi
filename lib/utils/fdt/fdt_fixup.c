@@ -155,7 +155,7 @@ int fdt_reserved_memory_fixup(void *fdt)
 	struct sbi_domain *dom	    = sbi_domain_thishart_ptr();
 	struct sbi_scratch *scratch = sbi_scratch_thishart_ptr();
 	unsigned long addr, size;
-	int err, parent, i;
+	int err, parent, i, resv_mem_subnode;
 	int na = fdt_address_cells(fdt, 0);
 	int ns = fdt_size_cells(fdt, 0);
 
@@ -196,6 +196,34 @@ int fdt_reserved_memory_fixup(void *fdt)
 		err = fdt_setprop_u32(fdt, parent, "#address-cells", na);
 		if (err < 0)
 			return err;
+	}
+
+	/* 
+	 * Add a subnode for memory reservation
+	 */
+	resv_mem_subnode = fdt_add_subnode(fdt, parent, "enclave-reserved");
+	if (resv_mem_subnode < 0) {
+		return resv_mem_subnode;
+	}
+	if (na == 2) {
+		err = fdt_appendprop_u64(fdt, resv_mem_subnode, "reg",
+					 0x80000000);
+	} else {
+		err = fdt_appendprop_u32(fdt, resv_mem_subnode, "reg",
+					 0x80000000);
+	}
+	if (err < 0) {
+		return err;
+	}
+	if (ns == 2) {
+		err = fdt_appendprop_u64(fdt, resv_mem_subnode, "reg",
+					 0x2000000);
+	} else {
+		err = fdt_appendprop_u32(fdt, resv_mem_subnode, "reg",
+					 0x2000000);
+	}
+	if (err < 0) {
+		return err;
 	}
 
 	/*
