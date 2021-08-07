@@ -155,7 +155,7 @@ int fdt_reserved_memory_fixup(void *fdt)
 	struct sbi_domain *dom	    = sbi_domain_thishart_ptr();
 	struct sbi_scratch *scratch = sbi_scratch_thishart_ptr();
 	unsigned long addr, size;
-	int err, parent, i, resv_mem_subnode;
+	int err, parent, i; //, resv_mem_subnode;
 	int na = fdt_address_cells(fdt, 0);
 	int ns = fdt_size_cells(fdt, 0);
 
@@ -198,33 +198,33 @@ int fdt_reserved_memory_fixup(void *fdt)
 			return err;
 	}
 
-	/* 
-	 * Add a subnode for memory reservation
-	 */
-	resv_mem_subnode = fdt_add_subnode(fdt, parent, "enclave-reserved");
-	if (resv_mem_subnode < 0) {
-		return resv_mem_subnode;
-	}
-	if (na == 2) {
-		err = fdt_appendprop_u64(fdt, resv_mem_subnode, "reg",
-					 0x80000000);
-	} else {
-		err = fdt_appendprop_u32(fdt, resv_mem_subnode, "reg",
-					 0x80000000);
-	}
-	if (err < 0) {
-		return err;
-	}
-	if (ns == 2) {
-		err = fdt_appendprop_u64(fdt, resv_mem_subnode, "reg",
-					 0x2000000);
-	} else {
-		err = fdt_appendprop_u32(fdt, resv_mem_subnode, "reg",
-					 0x2000000);
-	}
-	if (err < 0) {
-		return err;
-	}
+	// /*
+	//  * Add a subnode for memory reservation
+	//  */
+	// resv_mem_subnode = fdt_add_subnode(fdt, parent, "enclave-reserved");
+	// if (resv_mem_subnode < 0) {
+	// 	return resv_mem_subnode;
+	// }
+	// if (na == 2) {
+	// 	err = fdt_appendprop_u64(fdt, resv_mem_subnode, "reg",
+	// 				 0x80000000);
+	// } else {
+	// 	err = fdt_appendprop_u32(fdt, resv_mem_subnode, "reg",
+	// 				 0x80000000);
+	// }
+	// if (err < 0) {
+	// 	return err;
+	// }
+	// if (ns == 2) {
+	// 	err = fdt_appendprop_u64(fdt, resv_mem_subnode, "reg",
+	// 				 0x2000000);
+	// } else {
+	// 	err = fdt_appendprop_u32(fdt, resv_mem_subnode, "reg",
+	// 				 0x2000000);
+	// }
+	// if (err < 0) {
+	// 	return err;
+	// }
 
 	/*
 	 * We assume the given device tree does not contain any memory region
@@ -250,7 +250,7 @@ int fdt_reserved_memory_fixup(void *fdt)
 			continue;
 
 		addr = reg->base;
-		size = 1UL << reg->order;
+		size = 0x2000000; // 1UL << reg->order;
 		fdt_resv_memory_update_node(
 			fdt, addr, size, i, parent,
 			(sbi_hart_pmp_count(scratch)) ? false : true);
