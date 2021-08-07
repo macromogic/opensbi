@@ -285,21 +285,41 @@ int fdt_reserved_memory_nomap_fixup(void *fdt)
 	return 0;
 }
 
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
-#pragma GCC diagnostic push
+#define MY_SWITCH_ENDIAN_U32(num)                             \
+	((((num) >> 24) & 0xff) | (((num) << 8) & 0xff0000) | \
+	 (((num) >> 8) & 0xff00) | (((num) << 24) & 0xff000000))
+
 static int fdt_move_memory_region(void *fdt)
 {
-	int memory, len;
-	void *val;
+	int memory, len, i;
+	const void *val;
+	u32 newval[4];
+	int na = fdt_address_cells(fdt, 0);
+	int ns = fdt_size_cells(fdt, 0);
 
 	memory = fdt_path_offset(fdt, "/memory");
 	if (memory > 0) {
-		val	    = fdt_getprop(fdt, memory, "reg", &len);
-		*(u32 *)val = *(u32 *)val;
+		val = fdt_getprop(fdt, memory, "reg", &len);
+		for (i = 0; i < na + ns; ++i) {
+			newval[i] = MY_SWITCH_ENDIAN_U32(*(u32 *)(val + 4 * i));
+		}
+		if (ns == 1) {
+			*newval += 0x20000000;
+		} else {
+			*(u64 *)newval += 0x20000000;
+		}
+		if (na == 1) {
+			*(newval + 4 * ns) -= 0x20000000;
+		} else {
+			*(u64 *)(newval + 4 * ns) -= 0x20000000;
+		}
+		for (i = 0; i < na + ns; ++i) {
+			newval[i] = MY_SWITCH_ENDIAN_U32(newval[i]);
+		}
+		fdt_setprop(fdt, memory, "reg", newval, len);
 	}
 	return 0;
 }
-#pragma GCC diagnostic pop
 
 void fdt_fixups(void *fdt)
 {
