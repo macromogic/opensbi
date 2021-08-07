@@ -250,7 +250,7 @@ int fdt_reserved_memory_fixup(void *fdt)
 			continue;
 
 		addr = reg->base;
-		size = 0x2000000; // 1UL << reg->order;
+		size = 1UL << reg->order;
 		fdt_resv_memory_update_node(
 			fdt, addr, size, i, parent,
 			(sbi_hart_pmp_count(scratch)) ? false : true);
@@ -285,9 +285,27 @@ int fdt_reserved_memory_nomap_fixup(void *fdt)
 	return 0;
 }
 
+#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
+#pragma GCC diagnostic push
+static int fdt_move_memory_region(void *fdt)
+{
+	int memory, len;
+	void *val;
+
+	memory = fdt_path_offset(fdt, "/memory");
+	if (memory > 0) {
+		val	    = fdt_getprop(fdt, memory, "reg", &len);
+		*(u32 *)val = *(u32 *)val;
+	}
+	return 0;
+}
+#pragma GCC diagnostic pop
+
 void fdt_fixups(void *fdt)
 {
 	fdt_plic_fixup(fdt, "riscv,plic0");
+
+	fdt_move_memory_region(fdt);
 
 	fdt_reserved_memory_fixup(fdt);
 }
