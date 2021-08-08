@@ -298,6 +298,7 @@ static int fdt_move_memory_region(void *fdt)
 	int ns = fdt_size_cells(fdt, 0);
 
 	memory = fdt_path_offset(fdt, "/memory");
+	fdt_set_name(fdt, memory, "memory");
 	if (memory > 0) {
 		val = fdt_getprop(fdt, memory, "reg", &len);
 		for (i = 0; i < na + ns; ++i) {
