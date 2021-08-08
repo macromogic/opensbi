@@ -289,6 +289,13 @@ int fdt_reserved_memory_nomap_fixup(void *fdt)
 	((((num) >> 24) & 0xff) | (((num) << 8) & 0xff0000) | \
 	 (((num) >> 8) & 0xff00) | (((num) << 24) & 0xff000000))
 
+#define SWAP(a, b)          \
+	do {                \
+		(a) ^= (b); \
+		(b) ^= (a); \
+		(a) ^= (b); \
+	} while (0)
+
 static int fdt_move_memory_region(void *fdt)
 {
 	int memory, len, i;
@@ -307,12 +314,16 @@ static int fdt_move_memory_region(void *fdt)
 		if (ns == 1) {
 			*newval += 0x20000000;
 		} else {
+			SWAP(*newval, *(newval + 1));
 			*(u64 *)newval += 0x20000000;
+			SWAP(*newval, *(newval + 1));
 		}
 		if (na == 1) {
-			*(newval + 4 * ns) -= 0x20000000;
+			*(newval + ns) -= 0x20000000;
 		} else {
-			*(u64 *)(newval + 4 * ns) -= 0x20000000;
+			SWAP(*(newval + ns), *(newval + ns + 1));
+			*(u64 *)(newval + ns) -= 0x20000000;
+			SWAP(*(newval + ns), *(newval + ns + 1));
 		}
 		for (i = 0; i < na + ns; ++i) {
 			newval[i] = MY_SWITCH_ENDIAN_U32(newval[i]);
