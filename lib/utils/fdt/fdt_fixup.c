@@ -312,17 +312,17 @@ static int fdt_move_memory_region(void *fdt)
 			newval[i] = MY_SWITCH_ENDIAN_U32(*(u32 *)(val + 4 * i));
 		}
 		if (ns == 1) {
-			*newval += 0x20000000;
+			*newval += 0x2000000;
 		} else {
 			SWAP(*newval, *(newval + 1));
-			*(u64 *)newval += 0x20000000;
+			*(u64 *)newval += 0x2000000;
 			SWAP(*newval, *(newval + 1));
 		}
 		if (na == 1) {
-			*(newval + ns) -= 0x20000000;
+			*(newval + ns) -= 0x2000000;
 		} else {
 			SWAP(*(newval + ns), *(newval + ns + 1));
-			*(u64 *)(newval + ns) -= 0x20000000;
+			*(u64 *)(newval + ns) -= 0x2000000;
 			SWAP(*(newval + ns), *(newval + ns + 1));
 		}
 		for (i = 0; i < na + ns; ++i) {
