@@ -105,17 +105,19 @@ ret_to_usr:
 
     RESTORE_CONTEXT
     csrrw   sp, sscratch, sp
+    # jal     log
     sret
 
     .align 4
     .section ".text.init"
     .globl  _start
 _start:
-    /* use a tmp handler to adjust pc */
-    la      s7, adjust_pc
-    li      s6, EDRV_VA_PA_OFFSET
-    add     s7, s7, s6
-    csrw    stvec,  s7
+    la      s7, 2f
+    sub     s7, s7, a2      // s7 = 2f - mem_start (mem_start = a2)
+    li      s6, EDRV_VA_START
+    add     s7, s6, s7
+    csrw    stvec, s7
+
     /* temporary stack */
     la      sp, _temp_stack_end
     /* setup new page table */
@@ -123,7 +125,11 @@ _start:
     mv      sp, a1
     sfence.vma
     csrw    satp, a0
+.align 2
+2:
     sfence.vma
+    # fence.i
+    # icache.iall
 
     /* switch to trap handler */
     la      s7, trap_handler
@@ -137,9 +143,9 @@ _start:
 
     sret
 
-adjust_pc:
-    csrr    a5, sepc
-    li      a6, EDRV_VA_PA_OFFSET
-    add     a5, a5, a6
-    csrw    sepc, a5
-    sret
+
+log:
+    SAVE_CONTEXT
+    jal     show_reg
+    RESTORE_CONTEXT
+    ret

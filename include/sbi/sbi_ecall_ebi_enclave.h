@@ -79,6 +79,9 @@
 #define EBI_PUTS 410
 #define EBI_GETS 411
 
+#define EBI_FLUSH_DCACHE 430
+#define EBI_DISCARD_DCACHE 431
+
 #define EBI_OK 0
 #define EBI_ERROR -1
 
@@ -116,12 +119,13 @@
 #define EPPN(addr, level) \
 	(((addr) >> EPPN_SHIFT(level)) & ((1 << EPT_LEVEL_BITS) - 1))
 
-#define EMEM_SIZE 0x800000
+#define EDRV_VA_START 0xC0000000
+#define EMEM_SIZE SECTION_SIZE
 #define EDRV_MEM_SIZE 0x200000
 #define EDRV_STACK_SIZE 0x8000
 #define EUSR_MEM_SIZE (EMEM_SIZE - EDRV_MEM_SIZE)
-#define EUSR_STACK_SIZE 0x8000
-#define EUSR_HEAP_STACK_RATIO 10
+// #define EUSR_STACK_SIZE 0x8000
+// #define EUSR_HEAP_STACK_RATIO 10
 #define ROUND_UP(addr, size) (((addr) + ((size)-1)) & (~((size)-1)))
 #define PAGE_UP(addr) (ROUND_UP(addr, EPAGE_SIZE))
 #define PAGE_DOWN(addr) ((addr) & (~((EPAGE_SIZE)-1)))
@@ -129,17 +133,27 @@
 #define NUM_OF_PAGE(size) \
 	(((PAGE_UP(size)) >> EPAGE_SHIFT) & ((1 << (64 - EPAGE_SHIFT)) - 1))
 
-#define EDRV_PA_START 0x80000000
-#define EDRV_VA_START 0xC0000000
-#define EDRV_DRV_START 0xD0000000
-#define EDRV_VA_PA_OFFSET (EDRV_VA_START - EDRV_PA_START)
-
-#define EUSR_VA_START 0x0
+#define PERI_NUM_MAX 128
 
 #include <stdint.h>
 #include <stddef.h>
 #include <sbi/riscv_atomic.h>
 #include <sbi/sbi_trap.h>
+
+typedef struct {
+	uintptr_t reg_pa_start;
+	uintptr_t reg_va_start;
+	uintptr_t reg_size;
+	int using_by;
+} peri_addr_t;
+
+typedef struct {
+	uintptr_t pmp_start;
+	uintptr_t pmp_size;
+	uintptr_t used;
+} pmp_region;
+
+#define PMP_REGION_MAX 4
 
 typedef struct {
 	uintptr_t id;
@@ -160,9 +174,19 @@ typedef struct {
 	uintptr_t drv_list;
 	uintptr_t user_param;
 	uintptr_t umode_context[MAX_INDEX];
+	peri_addr_t peri_list[PERI_NUM_MAX];
+	uint8_t peri_cnt;
 	char status;
+
+	uintptr_t pt_root_addr;
+	uintptr_t inverse_map_addr; // &inv_map (phys addr)
+	uintptr_t offset_addr;
+
+	pmp_region pmp_reg[PMP_REGION_MAX];
 } enclave_context;
+
 void pmp_switch(enclave_context *context);
+void pmp_update(enclave_context *context);
 extern uintptr_t create_enclave(const struct sbi_trap_regs *args,
 				uintptr_t mepc);
 extern uintptr_t enter_enclave(struct sbi_trap_regs *args, uintptr_t mepc);
@@ -170,8 +194,9 @@ extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);
 extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
 extern void init_enclaves(void);
+enclave_context *eid_to_context(uintptr_t eid);
 
-#define PHY_MEM_START 0x80000000UL
+#define PHY_MEM_START 0x40000000UL
 #define PHY_MEM_END 0x80000000UL
 
 typedef struct {
@@ -182,7 +207,23 @@ typedef struct {
 extern char _enclave_start, _enclave_end;
 extern char _base_start, _base_end;
 
-typedef uintptr_t pte;
+typedef struct pte {
+	uint32_t pte_v : 1;
+	uint32_t pte_r : 1;
+	uint32_t pte_w : 1;
+	uint32_t pte_x : 1;
+	uint32_t pte_u : 1;
+	uint32_t pte_g : 1;
+	uint32_t pte_a : 1;
+	uint32_t pte_d : 1;
+	uint32_t rsw : 2;
+	uintptr_t ppn : 28;
+	uintptr_t __unused_value : 22;
+	uintptr_t pte_s : 1;
+	uintptr_t pte_b : 1;
+	uintptr_t pte_c : 1;
+	uintptr_t pte_so : 1;
+} pte;
 
 void enclave_mem_init(void);
 uintptr_t enclave_mem_alloc(enclave_context *context, size_t enclave_size);
@@ -200,6 +241,12 @@ typedef struct {
 	int using_by;
 } drv_addr_t;
 
+#define NUM_ENCLAVE 10
+#define NUM_CORES 10
+
+extern enclave_context enclaves[NUM_ENCLAVE + 1];
+extern int enclave_on_core[NUM_CORES];
+
 #define MAX_DRV 64
 #define QUERY_INFO -1
 
@@ -207,6 +254,9 @@ extern drv_addr_t bbl_addr_list[64];
 uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask);
 char drvfetch(int drv_id, int enclave_id);
 void drvrelease(int drv_id, int enclave_id);
+void inform_peri(struct sbi_trap_regs *regs);
+void pmp_allow_access(peri_addr_t *peri);
+void pmp_allow_region(uintptr_t pa, uintptr_t size);
 
 // Currently, interrupts are always disabled in M-mode.
 #define disable_irqsave() (0)

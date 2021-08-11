@@ -29,6 +29,7 @@
 #define SBI_EXT_HSM				0x48534D
 #define SBI_EXT_SRST				0x53525354
 #define SBI_EXT_EBI				0x19260817
+#define SBI_EXT_DEBUG           		0xdeadbeef
 
 /* SBI function IDs for BASE extension*/
 #define SBI_EXT_BASE_GET_SPEC_VERSION		0x0
@@ -44,6 +45,19 @@
 
 /* SBI function IDs for IPI extension*/
 #define SBI_EXT_IPI_SEND_IPI			0x0
+
+
+/* SBI function IDs for SRST extension */
+#define SBI_EXT_SRST_RESET                      0x0
+
+#define SBI_SRST_RESET_TYPE_SHUTDOWN            0x0
+#define SBI_SRST_RESET_TYPE_COLD_REBOOT 0x1
+#define SBI_SRST_RESET_TYPE_WARM_REBOOT 0x2
+#define SBI_SRST_RESET_TYPE_LAST        SBI_SRST_RESET_TYPE_WARM_REBOOT
+
+#define SBI_SRST_RESET_REASON_NONE      0x0
+#define SBI_SRST_RESET_REASON_SYSFAIL   0x1
+
 
 /* SBI function IDs for RFENCE extension*/
 #define SBI_EXT_RFENCE_REMOTE_FENCE_I		0x0
@@ -99,12 +113,19 @@
 #define SBI_EXT_EBI_CREATE  399
 #define SBI_EXT_EBI_ENTER   400
 #define SBI_EXT_EBI_EXIT    401
-#define SBI_EXT_EBI_GOTO    402
-#define SBI_EXT_EBI_FETCH   403
-#define SBI_EXT_EBI_RELEASE 404
+// #define SBI_EXT_EBI_GOTO    402
+// #define SBI_EXT_EBI_FETCH   403
+// #define SBI_EXT_EBI_RELEASE 404
+#define SBI_EXT_EBI_MEM_ALLOC 405
+#define SBI_EXT_EBI_MAP_REGISTER 406
 
 #define SBI_EXT_EBI_PUTS    410
 #define SBI_EXT_EBI_GETS    411
+
+#define SBI_EXT_EBI_PERI_INFORM 420
+
+#define SBI_EXT_EBI_FLUSH_DCACHE 430
+#define SBI_EXT_EBI_DISCARD_DCACHE 431
 
 /* clang-format on */
 

@@ -8,9 +8,14 @@
 #define EBI_GOTO    402
 #define EBI_FETCH   403
 #define EBI_RELEASE 404
+#define EBI_MEM_ALLOC 405
+#define EBI_MAP_REGISTER 406
 
 #define EBI_PUTS    410
 #define EBI_GETS    411
+
+#define EBI_FLUSH_DCACHE 430
+#define EBI_DISCARD_DCACHE 431
 
 #define EBI_OK      0
 #define EBI_ERROR   -1
@@ -240,7 +245,7 @@ static inline void flush_tlb()
 #define DEFAULT_RSTVEC     0x00001000
 #define CLINT_BASE         0x02000000
 #define CLINT_SIZE         0x000c0000
-#define DRAM_BASE          0x80000000
+#define DRAM_BASE          0x40000000
 
 // page table entry (PTE) fields
 #define PTE_V     0x001 // Valid
@@ -252,6 +257,9 @@ static inline void flush_tlb()
 #define PTE_A     0x040 // Accessed
 #define PTE_D     0x080 // Dirty
 #define PTE_SOFT  0x300 // Reserved for Software
+
+#define PTE_C_SHIFT 62
+#define PTE_C     (1UL << PTE_C_SHIFT) // Cacheable
 
 #define PTE_PPN_SHIFT 10
 
