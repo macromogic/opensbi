@@ -337,7 +337,7 @@ void fdt_fixups(void *fdt)
 {
 	fdt_plic_fixup(fdt, "riscv,plic0");
 
-	fdt_move_memory_region(fdt);
+	// fdt_move_memory_region(fdt);
 
 	fdt_reserved_memory_fixup(fdt);
 }

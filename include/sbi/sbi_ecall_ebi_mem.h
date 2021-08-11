@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <sbi/sbi_ecall_ebi_enclave.h>
 
-#define SECTION_SHIFT	  23			// should be less than or equal to 26
-#define SECTION_SIZE	  (1UL << SECTION_SHIFT)
+#define SECTION_SHIFT 23 // should be less than or equal to 26
+#define SECTION_SIZE (1UL << SECTION_SHIFT)
 
 #define SECTION_UP(addr) (ROUND_UP(addr, SECTION_SIZE))
 #define SECTION_DOWN(addr) ((addr) & (~((SECTION_SIZE)-1)))
@@ -16,25 +16,25 @@
 #define MASK_L2 0x7fc0000000
 
 // make sure these addresses are section aligned
-#define	MEMORY_POOL_START 0x60000000
-#define MEMORY_POOL_END	  0xBF800000
-#define MEMORY_POOL_SECTION_NUM	  ((MEMORY_POOL_END - MEMORY_POOL_START) \
-				>> SECTION_SHIFT)
+#define MEMORY_POOL_START 0xC0000000
+#define MEMORY_POOL_END 0x4BF800000
+#define MEMORY_POOL_SECTION_NUM \
+	((MEMORY_POOL_END - MEMORY_POOL_START) >> SECTION_SHIFT)
 
 #define INVERSE_MAP_ENTRY_NUM 1024
 // NOTE: when modifying, modify mm/page_table.h at the same time!!!!!!!
 #define PAGE_DIR_POOL 256
 
 struct section {
-	uintptr_t sfn;	// section frame number
-	int owner;	// enclave id of the owner. -1 if unused.
-	uintptr_t va;   // linearly mapped addr of the section
-}; 
+	uintptr_t sfn; // section frame number
+	int owner;     // enclave id of the owner. -1 if unused.
+	uintptr_t va;  // linearly mapped addr of the section
+};
 
 typedef struct inverse_map {
-    uintptr_t pa;
-    uintptr_t va;
-    uint32_t count;
+	uintptr_t pa;
+	uintptr_t va;
+	uint32_t count;
 } inverse_map;
 
 extern struct section memory_pool[MEMORY_POOL_SECTION_NUM];
