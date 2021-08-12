@@ -285,6 +285,7 @@ int fdt_reserved_memory_nomap_fixup(void *fdt)
 	return 0;
 }
 
+/*
 #define MY_SWITCH_ENDIAN_U32(num)                             \
 	((((num) >> 24) & 0xff) | (((num) << 8) & 0xff0000) | \
 	 (((num) >> 8) & 0xff00) | (((num) << 24) & 0xff000000))
@@ -332,6 +333,7 @@ static int fdt_move_memory_region(void *fdt)
 	}
 	return 0;
 }
+//*/
 
 void fdt_fixups(void *fdt)
 {

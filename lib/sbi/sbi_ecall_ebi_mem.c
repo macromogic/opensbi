@@ -61,6 +61,7 @@ void flush_dcache_range(unsigned long start, unsigned long end)
 	// for (; i < end; i += L1_CACHE_BYTES)
 	// 	asm volatile(".long 0x0295000b"); /*dcache.cpa a0*/
 	// asm volatile(".long 0x01b0000b");	  /*sync.is*/
+	asm volatile(".long 0xFC000073"); // cflush.d.l1 zero
 }
 
 void invalidate_dcache_range(unsigned long start, unsigned long end)
@@ -71,6 +72,7 @@ void invalidate_dcache_range(unsigned long start, unsigned long end)
 	// 	asm volatile("dcache.ipa a0");
 
 	// asm volatile(".long 0x01b0000b");
+	asm volatile(".long 0xFC200073"); // cdiscard.d.l1 zero
 }
 
 static uintptr_t alloc_section_for_linux()
@@ -366,7 +368,7 @@ void init_memory_pool()
 	}
 
 	sbi_printf("[init_memory_pool] memory pool init successed!"
-		   "start = 0x%x, end = 0x%x, num = %u\n",
+		   "start = 0x%x, end = 0x%lx, num = %lu\n",
 		   MEMORY_POOL_START, MEMORY_POOL_END, MEMORY_POOL_SECTION_NUM);
 
 	return;

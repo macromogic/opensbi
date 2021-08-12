@@ -112,12 +112,12 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 		return ret;
 
 	case SBI_EXT_EBI_FLUSH_DCACHE:
-		// asm volatile("cflush.d.l1 zero");
+		asm volatile(".long 0xFC000073"); // cflush.d.l1 zero
 		// TODO Clean L2?
 		return ret;
 
 	case SBI_EXT_EBI_DISCARD_DCACHE:
-		// asm volatile("cdiscard.d.l1 zero");
+		asm volatile(".long 0xFC200073"); // cdiscard.d.l1 zero
 		// TODO Clean L2?
 		return ret;
 	}
