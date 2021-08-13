@@ -41,7 +41,6 @@ uintptr_t uart16550_clock = 3686400; // a "common" base clock
 #define UART_RXCTRL_RXEN	0x1
 
 /* clang-format on */
-typedef unsigned int u32;
 
 // We cannot use the word DEFAULT for a parameter that cannot be overridden due to -Werror
 #ifndef UART_DEFAULT_BAUD
@@ -134,11 +133,12 @@ uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1,
 	case QUERY_INFO:
 		return (uintptr_t)&ctrl;
 	case CONSOLE_CMD_INIT:
-		return uart16550_init(arg0);
+		return sifive_uart_init(arg0, uart16550_clock, UART_DEFAULT_BAUD);
 	case CONSOLE_CMD_PUT:
-		return uart16550_putchar((uint8_t)(arg0 & 0xff));
+		sifive_uart_putc((char)arg0);
+    return 0;
 	case CONSOLE_CMD_GET:
-		return uart16550_getchar((uint8_t *)arg0);
+		return sifive_uart_getc();
 	case CONSOLE_CMD_DESTORY:
 		return 0;
 		// return uart16550_destroy();
