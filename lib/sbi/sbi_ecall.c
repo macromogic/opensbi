@@ -176,6 +176,12 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 
 	if (extension_id == SBI_EXT_EBI) {
 		sbi_printf("[sbi_ecall_handler] Ret\n");
+		sbi_printf("[sbi_ecall_handler] regs->a1 = %lx\n", regs->a1);
+		sbi_printf("[sbi_ecall_handler] regs->a2 = %lx\n", regs->a2);
+		sbi_printf("[sbi_ecall_handler] regs->a3 = %lx\n", regs->a3);
+		sbi_printf("[sbi_ecall_handler] regs->a4 = %lx\n", regs->a4);
+		sbi_printf("[sbi_ecall_handler] regs->a5 = %lx\n", regs->a5);
+		sbi_printf("[sbi_ecall_handler] regs->a6 = %lx\n", regs->a6);
 		sbi_printf("[sbi_ecall_handler] mepc=%lx, mstatus=%lx\n",
 			   csr_read(CSR_MEPC), csr_read(CSR_MSTATUS));
 	}
