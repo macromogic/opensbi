@@ -167,9 +167,11 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		if (extension_id == SBI_EXT_EBI)
 			sbi_printf("[sbi_ecall_handler] Ding\n");
 		regs->mepc += 4;
-		regs->a0 = ret;
-		if (!is_0_1_spec)
-			regs->a1 = out_val;
+		if (extension_id != SBI_EXT_EBI) {
+			regs->a0 = ret;
+			if (!is_0_1_spec)
+				regs->a1 = out_val;
+		}
 		if (extension_id == SBI_EXT_EBI)
 			sbi_printf("[sbi_ecall_handler] Dong\n");
 	}
