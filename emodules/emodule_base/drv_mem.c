@@ -44,6 +44,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start, uintptr_t usr_size
     ENC_VA_PA_OFFSET = EDRV_VA_START - ENC_PA_START; // should be updated when base is migrated
     va_top = EDRV_VA_START; // will increase by EMEM_SIZE after spa_init inside init_mem
 
+    printd("[S mode init_mem] _ = %d\n", _);
     printd("[S mode init_mem] id = %d\n", id);
     printd("[S mode init_mem] mem_start = 0x%lx\n", mem_start);
     printd("[S mode init_mem] VA_PA_OFFSET = 0x%lx\n", ENC_VA_PA_OFFSET);
