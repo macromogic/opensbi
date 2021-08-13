@@ -207,7 +207,7 @@ int sbi_trap_redirect(struct sbi_trap_regs *regs,
 
 void sbi_trap_handler(struct sbi_trap_regs *regs);
 
-void __noreturn sbi_trap_exit(const struct sbi_trap_regs *regs);
+void __noreturn sbi_trap_exit(struct sbi_trap_regs *regs);
 
 #endif
 

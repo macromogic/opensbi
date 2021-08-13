@@ -276,7 +276,7 @@ trap_error:
 		sbi_trap_error(msg, rc, mcause, mtval, mtval2, mtinst, regs);
 }
 
-typedef void (*trap_exit_t)(const struct sbi_trap_regs *regs);
+typedef void (*trap_exit_t)(struct sbi_trap_regs *regs);
 
 /**
  * Exit trap/interrupt handling
@@ -287,7 +287,7 @@ typedef void (*trap_exit_t)(const struct sbi_trap_regs *regs);
  *
  * @param regs pointer to register state
  */
-void __noreturn sbi_trap_exit(const struct sbi_trap_regs *regs)
+void __noreturn sbi_trap_exit(struct sbi_trap_regs *regs)
 {
 	struct sbi_scratch *scratch = sbi_scratch_thishart_ptr();
 

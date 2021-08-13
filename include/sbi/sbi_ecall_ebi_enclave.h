@@ -187,7 +187,7 @@ typedef struct {
 
 void pmp_switch(enclave_context *context);
 void pmp_update(enclave_context *context);
-extern uintptr_t create_enclave(const struct sbi_trap_regs *args,
+extern uintptr_t create_enclave(struct sbi_trap_regs *args,
 				uintptr_t mepc);
 extern uintptr_t enter_enclave(struct sbi_trap_regs *args, uintptr_t mepc);
 extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);

@@ -347,7 +347,7 @@ void init_enclaves(void)
 	sbi_printf("[EBI] enclaves init successfully!");
 }
 
-uintptr_t create_enclave(const struct sbi_trap_regs *regs, uintptr_t mepc)
+uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 {
 	uintptr_t payload_addr;
 	payload_addr		 = regs->a0;
