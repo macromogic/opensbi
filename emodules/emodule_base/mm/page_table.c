@@ -76,10 +76,6 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	}
 	tmp_pte->pte_v = tmp_pte->pte_g = 1;
 	// tmp_pte->pte_v = 1;
-	if (attr & PTE_C) {
-		// tmp_pte->pte_c = tmp_pte->pte_b = tmp_pte->pte_s = 1;
-		tmp_pte->pte_c = 1;
-	}
 	if(attr & PTE_U){
 		tmp_pte->pte_u = 1;
 	}
