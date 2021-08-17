@@ -6,17 +6,17 @@
 #include <stdint.h>
 #include "../util/drv_ctrl.h"
 
-#define CONSOLE_CMD_INIT    0
-#define CONSOLE_CMD_PUT     1
-#define CONSOLE_CMD_GET     2
+#define CONSOLE_CMD_INIT 0
+#define CONSOLE_CMD_PUT 1
+#define CONSOLE_CMD_GET 2
 #define CONSOLE_CMD_DESTORY 3
-#define CONSOLE_REG_ADDR    0x10000000
-#define CONSOLE_REG_SIZE    0x400
+#define CONSOLE_REG_ADDR 0x10010000
+#define CONSOLE_REG_SIZE 0x1000
 
-typedef unsigned char		u8;
-typedef unsigned short		u16;
-typedef unsigned int        u32;
-typedef unsigned long		u64;
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long u64;
 
 static inline void __raw_writeb(u8 val, volatile void *addr)
 {
