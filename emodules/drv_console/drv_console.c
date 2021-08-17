@@ -129,8 +129,6 @@ uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1,
 uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1,
 				uintptr_t arg2)
 {
-	printd("\033[1;33m[drv_console] cmd=%lx, args=(%lx, %lx, %lx)\033[0m\n",
-	       cmd, arg0, arg1, arg2);
 	switch (cmd) {
 	case QUERY_INFO:
 		return (uintptr_t)&ctrl;
