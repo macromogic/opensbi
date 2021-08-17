@@ -8,8 +8,6 @@
 volatile uint8_t *uart16550;
 // some devices require a shifted register index
 // (e.g. 32 bit registers instead of 8 bit registers)
-uintptr_t uart16550_reg_shift;
-uintptr_t uart16550_clock = 3686400; // a "common" base clock
 
 #define UART_REG_QUEUE 0 // rx/tx fifo data
 #define UART_REG_DLL 0	 // divisor latch (LSB)
@@ -133,8 +131,7 @@ uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1,
 	case QUERY_INFO:
 		return (uintptr_t)&ctrl;
 	case CONSOLE_CMD_INIT:
-		return sifive_uart_init(arg0, uart16550_clock,
-					UART_DEFAULT_BAUD);
+		return sifive_uart_init(arg0, 0x18cba80, UART_DEFAULT_BAUD);
 	case CONSOLE_CMD_PUT:
 		sifive_uart_putc((char)arg0);
 		return 0;
