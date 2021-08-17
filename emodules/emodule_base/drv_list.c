@@ -47,9 +47,9 @@ drv_ctrl_t *init_console_driver()
 	       get_pa(console_va));
 	printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",
 	       console_handler);
-	console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
+	// console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
 
-	printd("Console driver init successfully\n");
+	printd("(Fake) Console driver init successfully\n");
 	console_handler(CONSOLE_CMD_PUT, 'c', 0, 0);
 	console_handler(CONSOLE_CMD_PUT, 'o', 0, 0);
 	console_handler(CONSOLE_CMD_PUT, 'm', 0, 0);
