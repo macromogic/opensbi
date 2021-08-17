@@ -117,5 +117,9 @@ int fdt_serial_init(void)
 done:
 	sbi_printf("[fdt_serial] fdt=%p, save_noff=%x, save_noff2=%x\n", fdt,
 		   save_noff, save_noff2);
+	struct platform_uart_data uart;
+	fdt_parse_sifive_uart_node(fdt, save_noff, &uart);
+	sbi_printf("[fdt_serial] addr=%lx, freq=%lu, baud=%lu\n", uart.addr,
+		   uart.freq, uart.baud);
 	return 0;
 }
