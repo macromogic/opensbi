@@ -44,7 +44,7 @@ uintptr_t uart16550_clock = 3686400; // a "common" base clock
 
 // We cannot use the word DEFAULT for a parameter that cannot be overridden due to -Werror
 #ifndef UART_DEFAULT_BAUD
-#define UART_DEFAULT_BAUD 38400
+#define UART_DEFAULT_BAUD 115200
 #endif
 drv_ctrl_t ctrl = {
 	.reg_addr = CONSOLE_REG_ADDR,
