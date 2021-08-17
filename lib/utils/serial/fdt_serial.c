@@ -11,6 +11,7 @@
 #include <sbi/sbi_scratch.h>
 #include <sbi_utils/fdt/fdt_helper.h>
 #include <sbi_utils/serial/fdt_serial.h>
+#include <sbi/sbi_console.h>
 
 extern struct fdt_serial fdt_serial_uart8250;
 extern struct fdt_serial fdt_serial_sifive;
@@ -35,9 +36,9 @@ static int dummy_getc(void)
 
 static struct fdt_serial dummy = {
 	.match_table = NULL,
-	.init = NULL,
-	.putc = dummy_putc,
-	.getc = dummy_getc,
+	.init	     = NULL,
+	.putc	     = dummy_putc,
+	.getc	     = dummy_getc,
 };
 
 static struct fdt_serial *current_driver = &dummy;
@@ -58,6 +59,7 @@ int fdt_serial_init(void)
 	struct fdt_serial *drv;
 	const struct fdt_match *match;
 	int pos, noff = -1, len, coff, rc;
+	int save_noff = -1, save_noff2 = -1;
 	void *fdt = sbi_scratch_thishart_arg1_ptr();
 
 	/* Find offset of node pointed by stdout-path */
@@ -75,6 +77,9 @@ int fdt_serial_init(void)
 		match = fdt_match_node(fdt, noff, drv->match_table);
 		if (!match)
 			continue;
+		if (pos == 1) {
+			save_noff = noff;
+		}
 
 		if (drv->init) {
 			rc = drv->init(fdt, noff, match);
@@ -97,6 +102,9 @@ int fdt_serial_init(void)
 		if (noff < 0)
 			continue;
 
+		if (pos == 1) {
+			save_noff2 = noff;
+		}
 		if (drv->init) {
 			rc = drv->init(fdt, noff, match);
 			if (rc)
@@ -107,5 +115,7 @@ int fdt_serial_init(void)
 	}
 
 done:
+	sbi_printf("[fdt_serial] fdt=%p, save_noff=%x, save_noff2=%x\n", fdt,
+		   save_noff, save_noff2);
 	return 0;
 }
