@@ -129,14 +129,17 @@ uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1,
 uintptr_t uart16550_cmd_handler(uintptr_t cmd, uintptr_t arg0, uintptr_t arg1,
 				uintptr_t arg2)
 {
+	printd("\033[1;33m[drv_console] cmd=%lx, args=(%lx, %lx, %lx)\033[0m\n",
+	       cmd, arg0, arg1, arg2);
 	switch (cmd) {
 	case QUERY_INFO:
 		return (uintptr_t)&ctrl;
 	case CONSOLE_CMD_INIT:
-		return sifive_uart_init(arg0, uart16550_clock, UART_DEFAULT_BAUD);
+		return sifive_uart_init(arg0, uart16550_clock,
+					UART_DEFAULT_BAUD);
 	case CONSOLE_CMD_PUT:
 		sifive_uart_putc((char)arg0);
-    return 0;
+		return 0;
 	case CONSOLE_CMD_GET:
 		return sifive_uart_getc();
 	case CONSOLE_CMD_DESTORY:
