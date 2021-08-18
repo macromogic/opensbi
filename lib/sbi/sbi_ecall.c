@@ -185,7 +185,7 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		sbi_printf("[sbi_ecall_handler] regs->a5 = %lx\n", regs->a5);
 		sbi_printf("[sbi_ecall_handler] regs->a6 = %lx\n", regs->a6);
 		sbi_printf("[sbi_ecall_handler] mepc=%lx, mstatus=%lx\n",
-			   csr_read(CSR_MEPC), csr_read(CSR_MSTATUS));
+			   regs->mepc, regs->mstatus);
 	}
 
 	return 0;

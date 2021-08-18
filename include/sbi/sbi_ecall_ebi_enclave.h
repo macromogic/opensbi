@@ -237,7 +237,7 @@ typedef struct {
 	int using_by;
 } drv_addr_t;
 
-#define NUM_ENCLAVE 10
+#define NUM_ENCLAVE 180
 #define NUM_CORES 10
 
 extern enclave_context enclaves[NUM_ENCLAVE + 1];
