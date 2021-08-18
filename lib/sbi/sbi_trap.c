@@ -255,7 +255,10 @@ void sbi_trap_handler(struct sbi_trap_regs *regs)
 	case CAUSE_MACHINE_ECALL:
 	case CAUSE_USER_ECALL:
 		rc  = sbi_ecall_handler(regs);
-		sbi_printf("[sbi_trap] rc=%d, mepc=%lx\n", rc, regs->mepc);
+		if (regs->a7 == SBI_EXT_EBI) {
+			sbi_printf("[sbi_trap] After EBI call rc=%d, mepc=%lx\n", rc,
+				   regs->mepc);
+		}
 		msg = "ecall handler failed";
 		break;
 	default:
