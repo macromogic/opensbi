@@ -414,6 +414,7 @@ uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	context->drv_list	     = start_addr;
 	context->user_param	     = start_addr + drv_size;
 	// args[0]			     = avail_id;
+	regs->a0 = avail_id;
 	return avail_id;
 }
 

@@ -52,6 +52,20 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 		//write_csr(mepc, mepc + 4); // Avoid repeatedly enter the trap handler
 		ret = create_enclave(regs, mepc);
 		sbi_printf("[sbi_ecall_ebi_handler] after create_enclave\n");
+		sbi_printf("[sbi_ecall_ebi_handler] regs->a1 = %lx\n",
+			   regs->a1);
+		sbi_printf("[sbi_ecall_ebi_handler] regs->a2 = %lx\n",
+			   regs->a2);
+		sbi_printf("[sbi_ecall_ebi_handler] regs->a3 = %lx\n",
+			   regs->a3);
+		sbi_printf("[sbi_ecall_ebi_handler] regs->a4 = %lx\n",
+			   regs->a4);
+		sbi_printf("[sbi_ecall_ebi_handler] regs->a5 = %lx\n",
+			   regs->a5);
+		sbi_printf("[sbi_ecall_ebi_handler] regs->a6 = %lx\n",
+			   regs->a6);
+		sbi_printf("[sbi_ecall_ebi_handler] mepc=%lx, mstatus=%lx\n",
+			   csr_read(CSR_MEPC), csr_read(CSR_MSTATUS));
 		return ret;
 
 	case SBI_EXT_EBI_ENTER:
