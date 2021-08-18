@@ -6,7 +6,7 @@
 #include "drv_base.h"
 
 void handle_interrupt(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
-    printd("[S mode handle_interrupt] start, scause = 0x%lx\n", scause);
+    // printd("[S mode handle_interrupt] start, scause = 0x%lx\n", scause);
     // uintptr_t sip, sie;
     switch (scause)
     {
@@ -36,8 +36,8 @@ void handle_exception(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 }
 
 void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval) {
-    printd("[handle_syscall] start\n");
-    printd("[handle_syscall] sepc: 0x%lx\n",sepc);
+    // printd("[handle_syscall] start\n");
+    // printd("[handle_syscall] sepc: 0x%lx\n",sepc);
 
     uintptr_t sstatus = read_csr(sstatus);
     // sstatus |= SSTATUS_SUM;
@@ -48,21 +48,21 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
     }
 
     uintptr_t which = regs[A7_INDEX], arg_0 = regs[A0_INDEX], arg_1 = regs[A1_INDEX], retval = 0;
-    printd("[handle_syscall] which: %d\n",which);
+    // printd("[handle_syscall] which: %d\n",which);
     switch (which)
     {
     case SYS_fstat:
         retval = ebi_fstat(arg_0,arg_1);
         break;
     case SYS_write:
-        printd("[handle_syscall] SYS_write\n");
+        // printd("[handle_syscall] SYS_write\n");
         retval = ebi_write(arg_0, arg_1);
         break;
     case SYS_close:
         retval = ebi_close(arg_0);
         break;
     case SYS_brk:
-        printd("[handle_syscall] SYS_brk: arg0 = 0x%lx\n", arg_0);
+        // printd("[handle_syscall] SYS_brk: arg0 = 0x%lx\n", arg_0);
         retval = ebi_brk(arg_0);
         break;
     case SYS_gettimeofday:
@@ -70,7 +70,7 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         break;
     case SYS_exit:
         // SBI_CALL(EBI_EXIT, enclave_id, arg_0, 0);
-        printd("[handle_syscall] SYS_exit\n");
+        // printd("[handle_syscall] SYS_exit\n");
         SBI_CALL5(SBI_EXT_EBI, enclave_id, arg_0, 0, EBI_EXIT);
         break;
     case EBI_GOTO:
@@ -82,14 +82,14 @@ void handle_syscall(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t
         SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
         break;
     }
-    printd("[handle_syscall] before writing sepc: sepc = 0x%lx\n", sepc);
+    // printd("[handle_syscall] before writing sepc: sepc = 0x%lx\n", sepc);
     write_csr(sepc, sepc + 4);
-    printd("[handle_syscall] after writing sepc: sepc = 0x%lx\n", read_csr(sepc));
+    // printd("[handle_syscall] after writing sepc: sepc = 0x%lx\n", read_csr(sepc));
     sstatus = sstatus & ~(SSTATUS_SPP | SSTATUS_UIE | SSTATUS_UPIE);
     // printd("[handle_syscall] before write to sstatus\n");
     write_csr(sstatus, sstatus);
-    printd("[handle_syscall] after write to sstatus\n");
-    printd("[handle_syscall] end\n");
+    // printd("[handle_syscall] after write to sstatus\n");
+    // printd("[handle_syscall] end\n");
     regs[A0_INDEX] = retval;
 }
 void unimplemented_exception(uintptr_t* regs, uintptr_t scause, uintptr_t sepc, uintptr_t stval){

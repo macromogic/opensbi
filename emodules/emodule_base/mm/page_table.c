@@ -59,7 +59,7 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	for (; i < len - 1; i++) {
 		if (!t->next[p][l[i]]) {
 			t->next[p][l[i]] = ++t->cnt;
-			printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
+			// printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
 
 			tmp_pte = &page_table[p][l[i]];
 			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_table[t->cnt][0]) >> 12;
@@ -159,18 +159,18 @@ void print_pte(uintptr_t va){
 		root = (pte *)(tmp + va_pa_offset());
 		i++;
 	}
-	printd("##########PRINT PTE @ %x############\n",va);
-	printd("PTE stored @ %p\n",root);
-	printd("PTE ppn: %x\n",tmp_entry.ppn);
-	printd("PTE pte_v: %x\n",tmp_entry.pte_v);
-	printd("PTE pte_r: %x\n",tmp_entry.pte_r);
-	printd("PTE pte_w: %x\n",tmp_entry.pte_w);
-	printd("PTE pte_x: %x\n",tmp_entry.pte_x);
-	printd("PTE pte_u: %x\n",tmp_entry.pte_u);
-	printd("PTE pte_g: %x\n",tmp_entry.pte_g);
-	printd("PTE pte_a: %x\n",tmp_entry.pte_a);
-	printd("PTE pte_d: %x\n",tmp_entry.pte_d);
-	printd("##########PRINT PTE END#################\n");
+	// printd("##########PRINT PTE @ %x############\n",va);
+	// printd("PTE stored @ %p\n",root);
+	// printd("PTE ppn: %x\n",tmp_entry.ppn);
+	// printd("PTE pte_v: %x\n",tmp_entry.pte_v);
+	// printd("PTE pte_r: %x\n",tmp_entry.pte_r);
+	// printd("PTE pte_w: %x\n",tmp_entry.pte_w);
+	// printd("PTE pte_x: %x\n",tmp_entry.pte_x);
+	// printd("PTE pte_u: %x\n",tmp_entry.pte_u);
+	// printd("PTE pte_g: %x\n",tmp_entry.pte_g);
+	// printd("PTE pte_a: %x\n",tmp_entry.pte_a);
+	// printd("PTE pte_d: %x\n",tmp_entry.pte_d);
+	// printd("##########PRINT PTE END#################\n");
 }
 
 uintptr_t get_pa(uintptr_t va)
@@ -210,10 +210,10 @@ void test_va(uintptr_t va)
 {
 	uintptr_t *content = (uintptr_t *)va;
 	uintptr_t pa = get_pa(va);
-	printd("[test_va] va: 0x%lx --> pa: 0x%lx\n", va, pa);
+	// printd("[test_va] va: 0x%lx --> pa: 0x%lx\n", va, pa);
 	print_pte(va);
-	if (read_csr(satp))
-		printd("[test_va] content: 0x%lx\n", *content);
+	// if (read_csr(satp))
+	// 	printd("[test_va] content: 0x%lx\n", *content);
 }
 
 void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
@@ -256,8 +256,8 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 {
 	static uintptr_t drv_addr_alloc = 0;
-	printd("[S mode ioremap] current root address: 0x%lx\n",
-		get_page_table_root());
+	// printd("[S mode ioremap] current root address: 0x%lx\n",
+		// get_page_table_root());
 	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
 	map_page(NULL,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
@@ -273,8 +273,8 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 	uintptr_t pa, prev_pa = 0, base_pa = 0;
 	inverse_map *inv_map_entry;
 
-	printd("[S mode alloc_page] va = 0x%lx, n = %d\n",
-			va, n_pages);
+	// printd("[S mode alloc_page] va = 0x%lx, n = %d\n",
+	// 		va, n_pages);
 	while (n_pages >= 1) {
 		// pa = spa_get_pa_zero(id);
 		pa = spa_get_pa(id);
@@ -331,14 +331,14 @@ inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 {
 	int i = 0;
 
-	printd("[s mode insert_inverse_map] "
-		"pa: 0x%lx, va: 0x%lx\n",
-		pa, va, count);
+	// printd("[s mode insert_inverse_map] "
+	// 	"pa: 0x%lx, va: 0x%lx\n",
+	// 	pa, va, count);
 	for (; inv_map[i].pa && i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) { // already exists; should update
-			printd("[s mode insert_inverse_map] updating entry; "
-				"original va: 0x%lx, count: %d\n",
-					va, count);
+			// printd("[s mode insert_inverse_map] updating entry; "
+			// 	"original va: 0x%lx, count: %d\n",
+			// 		va, count);
 			if (count != inv_map[i].count) {
 				// something goes wrong
 				printd("[s mode insert_inverse_map] "
@@ -359,7 +359,7 @@ inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 	inv_map[i].pa = pa;
 	inv_map[i].va = va;
 	inv_map[i].count = count;
-	printd("[s mode insert_inverse_map] new entry\n");
+	// printd("[s mode insert_inverse_map] new entry\n");
 
 	return &inv_map[i];
 }
@@ -371,10 +371,10 @@ void inverse_map_add_count(uintptr_t pa)
 	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) {
 			inv_map[i].count++;
-			if (inv_map[i].count % 100 == 0)
-				printd("[S mode inverse_map_add_count] "
-					"pa: 0x%lx, new count: %d\n",
-					pa, inv_map[i].count);
+			// if (inv_map[i].count % 100 == 0)
+				// printd("[S mode inverse_map_add_count] "
+				// 	"pa: 0x%lx, new count: %d\n",
+				// 	pa, inv_map[i].count);
 			return;
 		}
 	}
@@ -383,11 +383,11 @@ void inverse_map_add_count(uintptr_t pa)
 
 void dump_inverse_map()
 {
-	printd("[s mode dump_inverse_map] start-------------------\n");
-	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM && inv_map[i].pa; i++) {
-		printd("%d: pa = %lx, va = %lx, count = %d\n",
-			i, inv_map[i].pa, inv_map[i].va, inv_map[i].count);
+	// printd("[s mode dump_inverse_map] start-------------------\n");
+	// for (int i = 0; i < INVERSE_MAP_ENTRY_NUM && inv_map[i].pa; i++) {
+	// 	printd("%d: pa = %lx, va = %lx, count = %d\n",
+	// 		i, inv_map[i].pa, inv_map[i].va, inv_map[i].count);
 
-	}
-	printd("[s mode dump_inverse_map] end---------------------\n");
+	// }
+	// printd("[s mode dump_inverse_map] end---------------------\n");
 }

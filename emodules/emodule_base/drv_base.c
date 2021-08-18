@@ -83,20 +83,20 @@ static void test(uintptr_t va)
 {
 	static uintptr_t pa = 0x48808000;
 	map_page(NULL, va, pa, 1, -1);
-	printd("[S mode test] log 1\n");
+	// printd("[S mode test] log 1\n");
 	pa += EPAGE_SIZE;
-	printd("[S mode test] log 2\n");
+	// printd("[S mode test] log 2\n");
 	SBI_CALL5(0xdeadbeef, va, read_csr(satp), 0, 0); // dump pte in m mode
 	uintptr_t *ptr = (uintptr_t*)va;
 	uintptr_t content = *ptr;
-	printd("[S mode test] memory dump of %p: 0x%lx\n",
-		ptr, content);
+	// printd("[S mode test] memory dump of %p: 0x%lx\n",
+	// 	ptr, content);
 }
 
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
-	printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
-	printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
-	printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
+	// printd("[prepare_boot] peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
+	// printd("\033[0;32m[prepare_boot] enclave_id: 0x%lx at %p\n\033[0m", enclave_id, &enclave_id);
+	// printd("\033[0;32m[prepare_boot] drv_addr_list: %p at %p\n\033[0m", drv_addr_list, &drv_addr_list);
 
 	loop_test();
 
@@ -104,7 +104,7 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 
 	/* allow S mode access U mode memory */
 	uintptr_t sstatus = read_csr(sstatus);
-	printd("[prepare_boot] sstatus = 0x%lx\n", sstatus);
+	// printd("[prepare_boot] sstatus = 0x%lx\n", sstatus);
 	sstatus |= SSTATUS_SUM;
 	sstatus &= ~SSTATUS_SPP;
 	write_csr(sstatus, sstatus);
@@ -113,9 +113,9 @@ void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp) {
 	uintptr_t sie = SIE_SEIE | SIE_SSIE;
 	write_csr(sie, sie);
 
-	printd("[prepare_boot] usr_pc = 0x%lx\n", usr_pc);
+	// printd("[prepare_boot] usr_pc = 0x%lx\n", usr_pc);
 	/* set user entry */
 	write_csr(sepc, usr_pc);
-	printd("[prepare_boot] usr_sp = 0x%lx\n", usr_sp);
+	// printd("[prepare_boot] usr_sp = 0x%lx\n", usr_sp);
 	write_csr(sscratch, usr_sp);
 }

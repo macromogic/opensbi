@@ -141,7 +141,7 @@ void *my_memset(void *s, int c, unsigned int len)
 
 void print_color(const char *s)
 {
-	printd("\033[0;32m%s\033[0m\n", s);
+	// printd("\033[0;32m%s\033[0m\n", s);
 }
 
 // void show_reg(uintptr_t *regs)

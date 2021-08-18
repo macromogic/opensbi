@@ -11,7 +11,7 @@ drv_ctrl_t *init_console_driver()
 	cmd_handler console_handler;
 	drv_ctrl_t *console_ctrl;
 
-	printd("[init_console_driver]\n");
+	// printd("[init_console_driver]\n");
 
 	// extern char _drv_enclave_console_start, _drv_enclave_console_end;
 
@@ -43,21 +43,21 @@ drv_ctrl_t *init_console_driver()
 	// console_va = 0xd0000000;
 	// uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
 	// console_va = console_ctrl->reg_addr;
-	printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va,
-	       get_pa(console_va));
-	printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",
-	       console_handler);
+	// printd("console_va: 0x%x\n, entry: 0x%lx\n", console_va,
+	//        get_pa(console_va));
+	// printd("\033[0;36m[init_console_driver] console_handler at %p\n\033[0m",
+	//        console_handler);
 	console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
 
-	printd("Console driver init successfully\n");
-	console_handler(CONSOLE_CMD_PUT, 'c', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'o', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'm', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'p', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'a', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, '\n', 0, 0);
+	// printd("Console driver init successfully\n");
+	// console_handler(CONSOLE_CMD_PUT, 'c', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 'o', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 'm', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 'p', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 'a', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, '\n', 0, 0);
 
 	return console_ctrl;
 }
