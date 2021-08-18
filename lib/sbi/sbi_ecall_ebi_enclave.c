@@ -122,6 +122,19 @@ static inline void store_uint64_t(uint64_t *addr, uint64_t val, uintptr_t mepc)
 	store_uint32_t((uint32_t *)addr + 1, val >> 32, mepc);
 }
 
+static void dump_csr_context(const enclave_context *ctx)
+{
+	sbi_printf("[dump_csr_context] Dumping enclave context @%p\n", ctx);
+	sbi_printf("[dump_csr_context] satp = %lx\n", ctx->ns_satp);
+	sbi_printf("[dump_csr_context] medeleg = %lx\n", ctx->ns_medeleg);
+	sbi_printf("[dump_csr_context] sie = %lx\n", ctx->ns_sie);
+	sbi_printf("[dump_csr_context] stvec = %lx\n", ctx->ns_stvec);
+	sbi_printf("[dump_csr_context] sstatus = %lx\n", ctx->ns_sstatus);
+	sbi_printf("[dump_csr_context] sscratch = %lx\n", ctx->ns_sscratch);
+	sbi_printf("[dump_csr_context] mepc = %lx\n", ctx->ns_mepc);
+	sbi_printf("[dump_csr_context] mstatus = %lx\n", ctx->ns_mstatus);
+}
+
 // Allocate initial memory for enclave
 // @param:
 // context: enclave context
@@ -450,6 +463,9 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",
 		   into->drv_list);
 
+	dump_csr_context(from);
+	dump_csr_context(into);
+
 	// uintptr_t mxstatus = csr_read(CSR_MXSTATUS);
 	// sbi_printf("[M mode enter_enclave] mxstatus = 0x%lx\n", mxstatus);
 
@@ -482,6 +498,9 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	pmp_switch(NULL);
 	restore_umode_context(into, regs);
 	restore_csr_context(into, regs);
+
+	dump_csr_context(from);
+	dump_csr_context(into);
 
 	regs->a0 = retval;
 
