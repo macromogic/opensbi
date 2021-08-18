@@ -4,6 +4,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_ecall_ebi_enclave.h>
 #include <sbi/riscv_asm.h>
+#include <sbi/dummy_debug.h>
 // #include <sbi/sbi_ecall_ebi_dma.h>
 
 #define for_each_section_in_pool(pool, section, i)                   \
@@ -367,9 +368,11 @@ void init_memory_pool()
 		sec->owner = -1;
 	}
 
-	// sbi_printf("[init_memory_pool] memory pool init successed!"
-	// 	   "start = 0x%x, end = 0x%lx, num = %lu\n",
-	// 	   MEMORY_POOL_START, MEMORY_POOL_END, MEMORY_POOL_SECTION_NUM);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[init_memory_pool] memory pool init successed!"
+		   "start = 0x%x, end = 0x%lx, num = %lu\n",
+		   MEMORY_POOL_START, MEMORY_POOL_END, MEMORY_POOL_SECTION_NUM);
+#endif
 
 	return;
 }
@@ -406,7 +409,9 @@ static void free_section(uintptr_t sfn)
 	if (sec->owner < 0)
 		return;
 
-	// sbi_printf("[free_section] freeing section 0x%lx\n", sfn);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[free_section] freeing section 0x%lx\n", sfn);
+#endif
 
 	// clear memory
 	set_section_zero(sfn);
@@ -438,7 +443,7 @@ void free_section_for_enclave(int eid)
 
 void section_ownership_dump()
 {
-	/*
+#ifdef GLOBAL_DEBUG
 	int i, j;
 	struct section *sec;
 	// const int line_len = 5; // complex version
@@ -470,7 +475,7 @@ void section_ownership_dump()
 
 	sbi_printf(
 		"[M mode section_ownership_dump end]---------------------------\n");
-	//*/
+#endif
 }
 
 static void set_section_zero(uintptr_t sfn)
@@ -497,16 +502,20 @@ static pte *get_pte(uintptr_t pt_root, uintptr_t va)
 	uintptr_t tmp;
 	int i = 0;
 
-	// sbi_printf("[M mode get_pte] look for pte of va 0x%lx, root at 0x%p\n",
-	// va, root);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[M mode get_pte] look for pte of va 0x%lx, root at 0x%p\n",
+		   va, root);
+#endif
 	while (1) {
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
 			return NULL; // page that is not mapped
 		}
 		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
-			// sbi_printf("[M mode get_pte] pte = 0x%lx, at %p\n",
-			// *(uintptr_t *)&tmp_entry, &root[l[i]]);
+#ifdef GLOBAL_DEBUG
+			sbi_printf("[M mode get_pte] pte = 0x%lx, at %p\n",
+				   *(uintptr_t *)&tmp_entry, &root[l[i]]);
+#endif
 			return &root[l[i]];
 		}
 		tmp  = tmp_entry.ppn << 12;
@@ -517,7 +526,7 @@ static pte *get_pte(uintptr_t pt_root, uintptr_t va)
 
 static void inline mem_dump(uintptr_t addr, uintptr_t len)
 {
-	/*
+#ifdef GLOBAL_DEBUG
 	sbi_printf("[M mode mem_dump] start ----------------------");
 	unsigned char *ptr = (unsigned char *)addr;
 	for (int i = 0; i < len; i++) {
@@ -526,7 +535,7 @@ static void inline mem_dump(uintptr_t addr, uintptr_t len)
 		sbi_printf("0x%x\t", *ptr++);
 	}
 	sbi_printf("\n[M mode mem_dump] end ------------------------\n");
-	//*/
+#endif
 }
 
 static void section_copy(uintptr_t src_sfn, uintptr_t dst_sfn)
@@ -534,8 +543,10 @@ static void section_copy(uintptr_t src_sfn, uintptr_t dst_sfn)
 	// should use DMA on D1
 	uintptr_t dst_pa = dst_sfn << SECTION_SHIFT;
 	uintptr_t src_pa = src_sfn << SECTION_SHIFT;
-	// sbi_printf("[M mode section copy] copying from 0x%lx to 0x%lx\n",
-	// 	   src_pa, dst_pa);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[M mode section copy] copying from 0x%lx to 0x%lx\n",
+		   src_pa, dst_pa);
+#endif
 
 	sbi_memcpy((void *)dst_pa, (void *)src_pa, SECTION_SIZE);
 	// dma_copy(src_pa, dst_pa, SECTION_SIZE);
@@ -621,14 +632,14 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	uintptr_t satp;
 
 	// debug start -------
-	/*
+#ifdef GLOBAL_DEBUG
 	sbi_printf("[M mode section_migration] src_pa = 0x%lx, dst_pa = 0x%lx, "
 		   "delta_addr = 0x%lx\n",
 		   src_pa, dst_pa, delta_addr);
 	sbi_printf("[M mode section_migration] eid = 0x%lx\n", eid);
 	sbi_printf("[M mode section_migration] linear_start_va = 0x%lx\n",
 		   linear_start_va);
-	//*/
+#endif
 	// debug end   -------
 
 	if (eid < 0 || context == NULL) {
@@ -681,16 +692,22 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 		satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 		csr_write(CSR_SATP, satp);
 
-		// sbi_printf(
-		// 	"[M mode section_migration] offset_addr = 0x%lx, old value: 0x%lx ",
-		// 	offset_addr, *(uintptr_t *)offset_addr);
+#ifdef GLOBAL_DEBUG
+		sbi_printf(
+			"[M mode section_migration] offset_addr = 0x%lx, old value: 0x%lx ",
+			offset_addr, *(uintptr_t *)offset_addr);
+#endif
 		*(uintptr_t *)offset_addr -= delta_addr;
-		// sbi_printf("new value: 0x%lx\n", *(uintptr_t *)offset_addr);
+#ifdef GLOBAL_DEBUG
+		sbi_printf("new value: 0x%lx\n", *(uintptr_t *)offset_addr);
+#endif
 	}
 
 	// debug -----
-	// sbi_printf("[M mode section_migration] new pt_root = 0x%lx @ 0x%lx\n",
-	// 	   pt_root, pt_root_addr);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[M mode section_migration] new pt_root = 0x%lx @ 0x%lx\n",
+		   pt_root, pt_root_addr);
+#endif
 	// debug -----
 
 	// 4. Update page table
@@ -727,9 +744,11 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	free_section(src_sfn);
 
 	// debug start ----------
-	// pte *tmp_pte1 = get_pte(pt_root, 0x1110eUL);
-	// sbi_printf("[M mode section_migration] tmp_pte1: 0x%lx\n",
-	// 	   *(uintptr_t *)tmp_pte1);
+#ifdef GLOBAL_DEBUG
+	pte *tmp_pte1 = get_pte(pt_root, 0x1110eUL);
+	sbi_printf("[M mode section_migration] tmp_pte1: 0x%lx\n",
+		   *(uintptr_t *)tmp_pte1); //
+#endif
 	// debug end  ----------
 
 	// 6. flush tlb, cache
@@ -746,12 +765,12 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 
 __unused static void dump_inverse_map(inverse_map *inv_map)
 {
-	/*
+#ifdef GLOBAL_DEBUG
 	sbi_printf("[M mode dump_inverse_map] start-------------------\n");
 	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM && inv_map[i].pa; i++) {
 		sbi_printf("%d: pa = %lx, va = %lx, count = %d\n", i,
 			   inv_map[i].pa, inv_map[i].va, inv_map[i].count);
 	}
 	sbi_printf("[M mode dump_inverse_map] end---------------------\n");
-	//*/
+#endif
 }

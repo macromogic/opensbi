@@ -59,10 +59,16 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	for (; i < len - 1; i++) {
 		if (!t->next[p][l[i]]) {
 			t->next[p][l[i]] = ++t->cnt;
-			// printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n", t->cnt);
+#ifdef EMODULE_GLOBAL_DEBUG
+			printd("[S mode trie_get_or_insert] \033[1;33mpage cnt:%d\033[0m\n",
+			       t->cnt);
+#endif
 
 			tmp_pte = &page_table[p][l[i]];
-			tmp_pte->ppn = acce_to_phys((uintptr_t)&page_table[t->cnt][0]) >> 12;
+			tmp_pte->ppn =
+				acce_to_phys(
+					(uintptr_t)&page_table[t->cnt][0]) >>
+				12;
 			tmp_pte->pte_v = 1;
 		}
 
@@ -76,16 +82,16 @@ static uintptr_t trie_get_or_insert(trie *t, const uintptr_t va,
 	}
 	tmp_pte->pte_v = tmp_pte->pte_g = 1;
 	// tmp_pte->pte_v = 1;
-	if(attr & PTE_U){
+	if (attr & PTE_U) {
 		tmp_pte->pte_u = 1;
 	}
-	if(attr & PTE_W || attr & PTE_D){
+	if (attr & PTE_W || attr & PTE_D) {
 		tmp_pte->pte_d = tmp_pte->pte_w = 1;
 	}
-	if(attr & PTE_R || attr & PTE_A){
-		tmp_pte->pte_a = tmp_pte->pte_r  = 1;
+	if (attr & PTE_R || attr & PTE_A) {
+		tmp_pte->pte_a = tmp_pte->pte_r = 1;
 	}
-	if(attr & PTE_X){
+	if (attr & PTE_X) {
 		tmp_pte->pte_x = 1;
 	}
 
@@ -96,21 +102,23 @@ static uintptr_t page_directory_insert(uintptr_t va, uintptr_t pa, int levels,
 				       uintptr_t attr)
 {
 	// uintptr_t p = (uintptr_t)trie_get_or_insert(&address_trie, va, pa,
-						//     levels, attr);
-	trie *t = (trie *)get_trie_root();
-	uintptr_t p = (uintptr_t)trie_get_or_insert(t, va, pa,
-						    levels, attr);
+	//     levels, attr);
+	trie *t	    = (trie *)get_trie_root();
+	uintptr_t p = (uintptr_t)trie_get_or_insert(t, va, pa, levels, attr);
 	return p;
 }
 
-void set_page_table_root(uintptr_t pt_root) // should only be invoked before mmu enabled
+void set_page_table_root(
+	uintptr_t pt_root) // should only be invoked before mmu enabled
 {
 	page_directory_pool = pt_root;
 }
 
 inline uintptr_t get_page_table_root() // returns accessible addr
 {
-	// printd("[S mode get_page_table_root] satp = 0x%lx\n", read_csr(satp));
+	// #ifdef EMODULE_GLOBAL_DEBUG
+	// 	printd("[S mode get_page_table_root] satp = 0x%lx\n", read_csr(satp));
+	// #endif
 	return page_directory_pool + va_pa_offset();
 }
 
@@ -120,7 +128,8 @@ inline uintptr_t get_trie_root()
 	return get_page_table_root() + EPAGE_SIZE * PAGE_DIR_POOL;
 }
 
-uintptr_t get_page_table_root_pointer_addr() // should only be invoked before mmu enabled
+uintptr_t
+get_page_table_root_pointer_addr() // should only be invoked before mmu enabled
 {
 	return (uintptr_t)&page_directory_pool;
 }
@@ -129,8 +138,9 @@ static inline void flush_page_table_cache_and_tlb()
 {
 	uintptr_t pt_root = page_directory_pool;
 	flush_dcache_range(pt_root,
-				pt_root + PAGE_DIR_POOL * EPAGE_SIZE
-				+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // flush does not work, why?
+			   pt_root + PAGE_DIR_POOL * EPAGE_SIZE +
+				   PAGE_DIR_POOL * 4 * 512 +
+				   EPAGE_SIZE); // flush does not work, why?
 	// invalidate_dcache_range(pt_root,
 	// 			pt_root + PAGE_DIR_POOL * EPAGE_SIZE
 	// 			+ PAGE_DIR_POOL * 4 * 512 + EPAGE_SIZE); // invalidation works, why?
@@ -138,11 +148,12 @@ static inline void flush_page_table_cache_and_tlb()
 	flush_tlb();
 }
 
-void print_pte(uintptr_t va){
-		uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
+void print_pte(uintptr_t va)
+{
+	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
 	pte entry;
-	pte *root = (void*) get_page_table_root();
+	pte *root = (void *)get_page_table_root();
 	pte tmp_entry;
 	uintptr_t tmp;
 	int i = 0;
@@ -159,18 +170,20 @@ void print_pte(uintptr_t va){
 		root = (pte *)(tmp + va_pa_offset());
 		i++;
 	}
-	// printd("##########PRINT PTE @ %x############\n",va);
-	// printd("PTE stored @ %p\n",root);
-	// printd("PTE ppn: %x\n",tmp_entry.ppn);
-	// printd("PTE pte_v: %x\n",tmp_entry.pte_v);
-	// printd("PTE pte_r: %x\n",tmp_entry.pte_r);
-	// printd("PTE pte_w: %x\n",tmp_entry.pte_w);
-	// printd("PTE pte_x: %x\n",tmp_entry.pte_x);
-	// printd("PTE pte_u: %x\n",tmp_entry.pte_u);
-	// printd("PTE pte_g: %x\n",tmp_entry.pte_g);
-	// printd("PTE pte_a: %x\n",tmp_entry.pte_a);
-	// printd("PTE pte_d: %x\n",tmp_entry.pte_d);
-	// printd("##########PRINT PTE END#################\n");
+#ifdef EMODULE_GLOBAL_DEBUG
+	printd("##########PRINT PTE @ %x############\n", va);
+	printd("PTE stored @ %p\n", root);
+	printd("PTE ppn: %x\n", tmp_entry.ppn);
+	printd("PTE pte_v: %x\n", tmp_entry.pte_v);
+	printd("PTE pte_r: %x\n", tmp_entry.pte_r);
+	printd("PTE pte_w: %x\n", tmp_entry.pte_w);
+	printd("PTE pte_x: %x\n", tmp_entry.pte_x);
+	printd("PTE pte_u: %x\n", tmp_entry.pte_u);
+	printd("PTE pte_g: %x\n", tmp_entry.pte_g);
+	printd("PTE pte_a: %x\n", tmp_entry.pte_a);
+	printd("PTE pte_d: %x\n", tmp_entry.pte_d);
+	printd("##########PRINT PTE END#################\n");
+#endif
 }
 
 uintptr_t get_pa(uintptr_t va)
@@ -178,13 +191,15 @@ uintptr_t get_pa(uintptr_t va)
 	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
 			  (va & MASK_L0) >> 12 };
 	pte entry;
-	pte *root = (void*) get_page_table_root();
+	pte *root = (void *)get_page_table_root();
 	pte tmp_entry;
 	uintptr_t tmp;
 	int i = 0;
 	while (1) {
-		// printd("[S mode get_pa] i = %d, root = %p, OFFSET = 0x%lx\n",
-			// i, root, ENC_VA_PA_OFFSET);
+#ifdef EMODULE_GLOBAL_DEBUG
+		printd("[S mode get_pa] i = %d, root = %p, OFFSET = 0x%lx\n", i,
+		       root, ENC_VA_PA_OFFSET);
+#endif
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
 			printd("ERROR: va:0x%lx is not valid!!!\n", va);
@@ -209,11 +224,15 @@ uintptr_t get_pa(uintptr_t va)
 void test_va(uintptr_t va)
 {
 	uintptr_t *content = (uintptr_t *)va;
-	uintptr_t pa = get_pa(va);
-	// printd("[test_va] va: 0x%lx --> pa: 0x%lx\n", va, pa);
+	uintptr_t pa	   = get_pa(va);
+#ifdef EMODULE_GLOBAL_DEBUG
+	printd("[test_va] va: 0x%lx --> pa: 0x%lx\n", va, pa);
+#endif
 	print_pte(va);
-	// if (read_csr(satp))
-	// 	printd("[test_va] content: 0x%lx\n", *content);
+#ifdef EMODULE_GLOBAL_DEBUG
+	if (read_csr(satp))
+		printd("[test_va] content: 0x%lx\n", *content);
+#endif
 }
 
 void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
@@ -242,7 +261,7 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 		page_directory_insert(va, pa, 3, attr);
 		// if (n_pages == 1)
 		// 	test_va(va);
-		
+
 		va += EPAGE_SIZE;
 		pa += EPAGE_SIZE;
 		n_pages--;
@@ -256,12 +275,14 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 uintptr_t ioremap(pte *root, uintptr_t pa, size_t size)
 {
 	static uintptr_t drv_addr_alloc = 0;
-	// printd("[S mode ioremap] current root address: 0x%lx\n",
-		// get_page_table_root());
-	size_t n_pages		      = PAGE_UP(size) >> EPAGE_SHIFT;
-	map_page(NULL,  EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
+#ifdef EMODULE_GLOBAL_DEBUG
+	printd("[S mode ioremap] current root address: 0x%lx\n",
+	       get_page_table_root());
+#endif
+	size_t n_pages = PAGE_UP(size) >> EPAGE_SHIFT;
+	map_page(NULL, EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
-	uintptr_t cur_addr =  EDRV_DRV_START;
+	uintptr_t cur_addr = EDRV_DRV_START;
 	drv_addr_alloc += n_pages << 12;
 	return cur_addr;
 }
@@ -273,13 +294,14 @@ uintptr_t alloc_page(pte *root, uintptr_t va, uintptr_t n_pages, uintptr_t attr,
 	uintptr_t pa, prev_pa = 0, base_pa = 0;
 	inverse_map *inv_map_entry;
 
-	// printd("[S mode alloc_page] va = 0x%lx, n = %d\n",
-	// 		va, n_pages);
+#ifdef EMODULE_GLOBAL_DEBUG
+	printd("[S mode alloc_page] va = 0x%lx, n = %d\n", va, n_pages);
+#endif
 	while (n_pages >= 1) {
 		// pa = spa_get_pa_zero(id);
 		pa = spa_get_pa(id);
-		if (pa == prev_pa + EPAGE_SIZE
-		&& SECTION_DOWN(pa) == SECTION_DOWN(prev_pa)) {
+		if (pa == prev_pa + EPAGE_SIZE &&
+		    SECTION_DOWN(pa) == SECTION_DOWN(prev_pa)) {
 			// inverse_map_add_count(base_pa);
 			inv_map_entry->count++;
 		} else {
@@ -322,29 +344,34 @@ void all_zero()
 	}
 }
 
-
 // look up pa first. if pa exists in the table, update it; otherwise
 // insert a new entry
 // when updating, count must match with the previous count
 // returns the newly inserted entry
-inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
+inverse_map *insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 {
 	int i = 0;
 
-	// printd("[s mode insert_inverse_map] "
-	// 	"pa: 0x%lx, va: 0x%lx\n",
-	// 	pa, va, count);
+#ifdef EMODULE_GLOBAL_DEBUG
+	printd("[s mode insert_inverse_map] "
+	       "pa: 0x%lx, va: 0x%lx\n",
+	       pa, va, count);
+#endif
 	for (; inv_map[i].pa && i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) { // already exists; should update
-			// printd("[s mode insert_inverse_map] updating entry; "
-			// 	"original va: 0x%lx, count: %d\n",
-			// 		va, count);
+#ifdef EMODULE_GLOBAL_DEBUG
+			printd("[s mode insert_inverse_map] updating entry; "
+			       "original va: 0x%lx, count: %d\n",
+			       va, count);
+#endif
 			if (count != inv_map[i].count) {
 				// something goes wrong
 				printd("[s mode insert_inverse_map] "
-					"ERROR: count does not match! "
-					"original count: %d\n", inv_map[i].count);
-				while(1);
+				       "ERROR: count does not match! "
+				       "original count: %d\n",
+				       inv_map[i].count);
+				while (1)
+					;
 				return NULL;
 			}
 			inv_map[i].va = va;
@@ -356,10 +383,12 @@ inverse_map* insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 	}
 
 	// new entry
-	inv_map[i].pa = pa;
-	inv_map[i].va = va;
+	inv_map[i].pa	 = pa;
+	inv_map[i].va	 = va;
 	inv_map[i].count = count;
-	// printd("[s mode insert_inverse_map] new entry\n");
+#ifdef EMODULE_GLOBAL_DEBUG
+	printd("[s mode insert_inverse_map] new entry\n");
+#endif
 
 	return &inv_map[i];
 }
@@ -371,10 +400,12 @@ void inverse_map_add_count(uintptr_t pa)
 	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) {
 			inv_map[i].count++;
-			// if (inv_map[i].count % 100 == 0)
-				// printd("[S mode inverse_map_add_count] "
-				// 	"pa: 0x%lx, new count: %d\n",
-				// 	pa, inv_map[i].count);
+#ifdef EMODULE_GLOBAL_DEBUG
+			if (inv_map[i].count % 100 == 0)
+				printd("[S mode inverse_map_add_count] "
+				       "pa: 0x%lx, new count: %d\n",
+				       pa, inv_map[i].count);
+#endif
 			return;
 		}
 	}
@@ -383,11 +414,12 @@ void inverse_map_add_count(uintptr_t pa)
 
 void dump_inverse_map()
 {
-	// printd("[s mode dump_inverse_map] start-------------------\n");
-	// for (int i = 0; i < INVERSE_MAP_ENTRY_NUM && inv_map[i].pa; i++) {
-	// 	printd("%d: pa = %lx, va = %lx, count = %d\n",
-	// 		i, inv_map[i].pa, inv_map[i].va, inv_map[i].count);
-
-	// }
-	// printd("[s mode dump_inverse_map] end---------------------\n");
+#ifdef EMODULE_GLOBAL_DEBUG
+	printd("[s mode dump_inverse_map] start-------------------\n");
+	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM && inv_map[i].pa; i++) {
+		printd("%d: pa = %lx, va = %lx, count = %d\n", i, inv_map[i].pa,
+		       inv_map[i].va, inv_map[i].count);
+	}
+	printd("[s mode dump_inverse_map] end---------------------\n");
+#endif
 }

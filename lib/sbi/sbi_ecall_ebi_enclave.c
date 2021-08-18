@@ -6,6 +6,7 @@
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_hart.h>
 #include <sbi/sbi_ecall_ebi_mem.h>
+#include <sbi/dummy_debug.h>
 
 // #define MAX_PAGE 8192
 // static enclave_page_t pages[MAX_PAGE];
@@ -126,6 +127,7 @@ static inline void store_uint64_t(uint64_t *addr, uint64_t val, uintptr_t mepc)
 #pragma GCC diagnostic push
 static void dump_csr_context(const enclave_context *ctx)
 {
+#ifdef GLOBAL_DEBUG
 	sbi_printf("[dump_csr_context] Dumping enclave context @%p\n", ctx);
 	sbi_printf("[dump_csr_context] satp = %lx\n", ctx->ns_satp);
 	sbi_printf("[dump_csr_context] medeleg = %lx\n", ctx->ns_medeleg);
@@ -135,6 +137,7 @@ static void dump_csr_context(const enclave_context *ctx)
 	sbi_printf("[dump_csr_context] sscratch = %lx\n", ctx->ns_sscratch);
 	sbi_printf("[dump_csr_context] mepc = %lx\n", ctx->ns_mepc);
 	sbi_printf("[dump_csr_context] mstatus = %lx\n", ctx->ns_mstatus);
+#endif
 }
 #pragma GCC diagnostic pop
 
@@ -159,8 +162,10 @@ uintptr_t enclave_initial_mem_alloc(enclave_context *context,
 	pa = alloc_section_for_enclave(context, EDRV_VA_START);
 
 	context->pa = pa;
-	// sbi_printf("[enclave_initial_mem_alloc] context->pa = %lx\n",
-	// 	   context->pa);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[enclave_initial_mem_alloc] context->pa = %lx\n",
+		   context->pa);
+#endif
 	context->mem_size = enclave_size;
 	return EBI_OK;
 }
@@ -173,7 +178,9 @@ uintptr_t enclave_mem_free(enclave_context *context)
 	context->pt_root_addr	  = 0;
 	context->inverse_map_addr = 0;
 
-	// sbi_printf("[enclave_mem_free] freeing enclave %d\n", eid);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[enclave_mem_free] freeing enclave %d\n", eid);
+#endif
 	free_section_for_enclave(eid);
 
 	return EBI_OK;
@@ -256,7 +263,9 @@ void pmp_allow_region(uintptr_t pa, uintptr_t size)
 
 void save_umode_context(enclave_context *context, struct sbi_trap_regs *regs)
 {
-	// sbi_printf("[save_umode_context] regs @ 0x%p\n", regs);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[save_umode_context] regs @ 0x%p\n", regs);
+#endif
 	sbi_memcpy(context->umode_context, regs, INTEGER_CONTEXT_SIZE);
 }
 
@@ -370,14 +379,17 @@ uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	size_t payload_size	 = regs->a1;
 	uintptr_t driver_bitmask = regs->a2;
 
-	// sbi_printf("[create_enclave] user_payload_addr = 0x%lx\n",
-		//    payload_addr);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[create_enclave] user_payload_addr = 0x%lx\n",
+		   payload_addr);
+#endif
 
 	if (PAGE_UP(payload_size) > EMEM_SIZE)
 		return EBI_ERROR;
 
-	// sbi_printf("[create_enclave] log1\n");
-
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[create_enclave] log1\n");
+#endif
 	enclave_context *context = NULL;
 	uintptr_t avail_id	 = find_avail_enclave();
 
@@ -392,11 +404,15 @@ uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	context->offset_addr	  = 0;
 	context->inverse_map_addr = 0;
 
-	// sbi_printf("[create_enclave] log2: enclave id: %lx\n", context->id);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[create_enclave] log2: enclave id: %lx\n", context->id);
+#endif
 
 	if (EBI_OK != enclave_initial_mem_alloc(context, EMEM_SIZE))
 		return EBI_ERROR;
-	// sbi_printf("[create_enclave] log3\n");
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[create_enclave] log3\n");
+#endif
 
 	uintptr_t base_start, base_end;
 	base_start	     = (uintptr_t)&_base_start;
@@ -405,24 +421,32 @@ uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	uintptr_t start_addr = context->pa + EUSR_MEM_SIZE;
 	uintptr_t drv_size   = 0;
 
-	// sbi_printf("[create_enclave] before copying: @start_addr: %lx\n",
-		//    *(ulong *)start_addr);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[create_enclave] before copying: @start_addr: %lx\n",
+		   *(ulong *)start_addr);
+#endif
 	sbi_memcpy((void *)start_addr, (void *)base_start, base_size);
-	// sbi_printf("[create_enclave] after copying: @start_addr: %lx\n",
-		//    *(ulong *)start_addr);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[create_enclave] after copying: @start_addr: %lx\n",
+		   *(ulong *)start_addr);
+#endif
 
 	start_addr += base_size;
-	// sbi_printf("%lx\n", start_addr);
-	// sbi_printf("[create_enclave] driver_bitmask: 0x%lx\n", driver_bitmask);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("%lx\n", start_addr);
+	sbi_printf("[create_enclave] driver_bitmask: 0x%lx\n", driver_bitmask);
+#endif
 	if (driver_bitmask != 0) {
 		drv_size = drvcpy(&start_addr, driver_bitmask);
 		// context->peri_bitmask = driver_bitmask;s
 	} else {
 		start_addr = 0;
 	}
-	// sbi_printf("[create_enclave] start_addr: %lx\n", start_addr);
-	// sbi_printf("[create_enclave] base_start: %lx\n", base_start);
-	// sbi_printf("[create_enclave] enclave pa = %lx\n", context->pa);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[create_enclave] start_addr: %lx\n", start_addr);
+	sbi_printf("[create_enclave] base_start: %lx\n", base_start);
+	sbi_printf("[create_enclave] enclave pa = %lx\n", context->pa);
+#endif
 	memcpy_from_user(payload_addr, context->pa, payload_size, mepc);
 	init_csr_context(context);
 
@@ -441,14 +465,20 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	enclave_context *into = &enclaves[id], *from = &enclaves[0];
 	uint32_t hartid = current_hartid();
 
-	// sbi_printf("[enter_enclave] enclave id = %lx\n", id);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[enter_enclave] enclave id = %lx\n", id);
+#endif
 	if (into->status != ENC_LOAD || from->status != ENC_RUN)
 		return EBI_ERROR;
 
-	// sbi_printf("[enter_enclave] log2\n");
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[enter_enclave] log2\n");
+#endif
 	memcpy_from_user(regs->a2, into->user_param, regs->a1, mepc);
 
-	// sbi_printf("[enter_enclave] log3\n");
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[enter_enclave] log3\n");
+#endif
 	pmp_switch(into);
 	save_umode_context(from, regs); // this line is not compatible !!!
 	save_csr_context(from, mepc, regs);
@@ -462,15 +492,17 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	regs->a4 = regs->a0;
 	regs->a5 = into->user_param;
 
-	// sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
-	// sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",
-	// 	   into->drv_list);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[enter_enclave] into->pa = 0x%lx\n", into->pa);
+	sbi_printf("\033[1;33m[enter_enclave] into->drv_list=0x%lx\n\033[0m",
+		   into->drv_list);
 
-	// dump_csr_context(from);
-	// dump_csr_context(into);
+	dump_csr_context(from);
+	dump_csr_context(into);
 
 	// uintptr_t mxstatus = csr_read(CSR_MXSTATUS);
 	// sbi_printf("[M mode enter_enclave] mxstatus = 0x%lx\n", mxstatus);
+#endif
 
 	regs->a0     = id;
 	regs->a1     = id;
@@ -487,12 +519,16 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	uintptr_t id = regs->a0, retval = regs->a1;
 	uint32_t hartid = current_hartid();
 
-	// sbi_printf("[exit_enclave] exit enclave %lx\n", id);
+#ifdef GLOBAL_DEBUG
+	sbi_printf("[exit_enclave] exit enclave %lx\n", id);
+#endif
 
 	enclave_context *from = &(enclaves[id]), *into = &enclaves[0];
 	if (from->status != ENC_RUN || into->status != ENC_IDLE)
 		return EBI_ERROR;
-	// dump_csr_context(from);
+#ifdef GLOBAL_DEBUG
+	dump_csr_context(from);
+#endif
 
 	// sbi_memset((void *)from->pa, 0, EMEM_SIZE);
 	enclave_mem_free(from);
@@ -503,7 +539,9 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	restore_umode_context(into, regs);
 	restore_csr_context(into, regs);
 
-	// dump_csr_context(into);
+#ifdef GLOBAL_DEBUG
+	dump_csr_context(into);
+#endif
 
 	regs->a0 = retval;
 
@@ -522,9 +560,11 @@ void inform_peri(struct sbi_trap_regs *regs)
 	current_enclave->peri_list[current_enclave->peri_cnt].reg_pa_start = pa;
 	current_enclave->peri_list[current_enclave->peri_cnt].reg_va_start = va;
 	current_enclave->peri_list[current_enclave->peri_cnt].reg_size	   = sz;
-	// sbi_printf(
-	// 	"\033[0;36mperiphare id %d, pa: 0x%lx, va: 0x%lx, sz: 0x%lx\n\033[0m",
-	// 	current_enclave->peri_cnt, pa, va, sz);
+#ifdef GLOBAL_DEBUG
+	sbi_printf(
+		"\033[0;36mPeripheral id %d, pa: 0x%lx, va: 0x%lx, sz: 0x%lx\n\033[0m",
+		current_enclave->peri_cnt, pa, va, sz);
+#endif
 	current_enclave->peri_cnt++;
 }
 
@@ -590,17 +630,21 @@ uintptr_t drvcpy(uintptr_t *start_addr, uintptr_t bitmask)
 	int cnt				    = 0;
 	for (int i = 0; i < MAX_DRV; i++) {
 		if (bbl_addr_list[i].drv_start && (bitmask & (1 << i))) {
-			// sbi_printf("[drvcpy] cnt = %d\n", cnt);
+#ifdef GLOBAL_DEBUG
+			sbi_printf("[drvcpy] cnt = %d\n", cnt);
+#endif
 			uintptr_t drv_start = bbl_addr_list[i].drv_start;
 			uintptr_t drv_size  = bbl_addr_list[i].drv_end -
 					     bbl_addr_list[i].drv_start;
 			_local_drv_addr_list[cnt].drv_start = *start_addr;
 			_local_drv_addr_list[cnt].drv_end =
 				*start_addr + drv_size;
-			// sbi_printf(
-			// 	"[drvcpy] drv %d: start = 0x%lx end = 0x%lx\n",
-			// 	i, _local_drv_addr_list[cnt].drv_start,
-			// 	_local_drv_addr_list[cnt].drv_end);
+#ifdef GLOBAL_DEBUG
+			sbi_printf(
+				"[drvcpy] drv %d: start = 0x%lx end = 0x%lx\n",
+				i, _local_drv_addr_list[cnt].drv_start,
+				_local_drv_addr_list[cnt].drv_end);
+#endif
 			cnt++;
 			sbi_memcpy((void *)(*start_addr), (void *)drv_start,
 				   drv_size);
