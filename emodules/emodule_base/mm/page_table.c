@@ -222,6 +222,10 @@ void map_page(pte *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	pte *pt;
 	char is_text = 0;
 
+	if (n_pages == 0) {
+		return;
+	}
+
 	if (va <= 0x100000) // to be modified: used by load_elf
 		is_text = 1;
 	if (is_text) {

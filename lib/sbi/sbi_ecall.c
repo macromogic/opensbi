@@ -109,11 +109,13 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 	unsigned long out_val	   = 0;
 	bool is_0_1_spec	   = 0;
 
+	/*
 	if (extension_id == SBI_EXT_EBI) {
 		sbi_printf(
 			"[sbi_ecall_handler] Calling EBI with function ID=%lu\n",
 			func_id);
 	}
+	//*/
 
 	ulong mcause	= csr_read(CSR_MCAUSE);
 	ulong mtval	= csr_read(CSR_MTVAL);
@@ -141,9 +143,11 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		ret = SBI_ENOTSUPP;
 	}
 
+	/*
 	if (extension_id == SBI_EXT_EBI) {
 		sbi_printf("[sbi_ecall_handler] EBI ret = %d\n", ret);
 	}
+	//*/
 
 	if (ret == SBI_ETRAP) {
 		trap.epc = regs->mepc;
@@ -164,18 +168,19 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		 * accordingly for now. Once fatal errors are defined, that
 		 * case should be handled differently.
 		 */
-		if (extension_id == SBI_EXT_EBI)
-			sbi_printf("[sbi_ecall_handler] Ding\n");
+		// if (extension_id == SBI_EXT_EBI)
+		// 	sbi_printf("[sbi_ecall_handler] Ding\n");
 		regs->mepc += 4;
 		if (extension_id != SBI_EXT_EBI) {
 			regs->a0 = ret;
 			if (!is_0_1_spec)
 				regs->a1 = out_val;
 		}
-		if (extension_id == SBI_EXT_EBI)
-			sbi_printf("[sbi_ecall_handler] Dong\n");
+		// if (extension_id == SBI_EXT_EBI)
+		// 	sbi_printf("[sbi_ecall_handler] Dong\n");
 	}
 
+	/*
 	if (extension_id == SBI_EXT_EBI) {
 		sbi_printf("[sbi_ecall_handler] Ret\n");
 		sbi_printf("[sbi_ecall_handler] regs->a1 = %lx\n", regs->a1);
@@ -187,6 +192,7 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		sbi_printf("[sbi_ecall_handler] mepc=%lx, mstatus=%lx\n",
 			   regs->mepc, regs->mstatus);
 	}
+	//*/
 
 	return 0;
 }

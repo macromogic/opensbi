@@ -367,9 +367,9 @@ void init_memory_pool()
 		sec->owner = -1;
 	}
 
-	sbi_printf("[init_memory_pool] memory pool init successed!"
-		   "start = 0x%x, end = 0x%lx, num = %lu\n",
-		   MEMORY_POOL_START, MEMORY_POOL_END, MEMORY_POOL_SECTION_NUM);
+	// sbi_printf("[init_memory_pool] memory pool init successed!"
+	// 	   "start = 0x%x, end = 0x%lx, num = %lu\n",
+	// 	   MEMORY_POOL_START, MEMORY_POOL_END, MEMORY_POOL_SECTION_NUM);
 
 	return;
 }
@@ -406,7 +406,7 @@ static void free_section(uintptr_t sfn)
 	if (sec->owner < 0)
 		return;
 
-	sbi_printf("[free_section] freeing section 0x%lx\n", sfn);
+	// sbi_printf("[free_section] freeing section 0x%lx\n", sfn);
 
 	// clear memory
 	set_section_zero(sfn);
@@ -438,6 +438,7 @@ void free_section_for_enclave(int eid)
 
 void section_ownership_dump()
 {
+	/*
 	int i, j;
 	struct section *sec;
 	// const int line_len = 5; // complex version
@@ -469,6 +470,7 @@ void section_ownership_dump()
 
 	sbi_printf(
 		"[M mode section_ownership_dump end]---------------------------\n");
+	//*/
 }
 
 static void set_section_zero(uintptr_t sfn)
@@ -515,6 +517,7 @@ static pte *get_pte(uintptr_t pt_root, uintptr_t va)
 
 static void inline mem_dump(uintptr_t addr, uintptr_t len)
 {
+	/*
 	sbi_printf("[M mode mem_dump] start ----------------------");
 	unsigned char *ptr = (unsigned char *)addr;
 	for (int i = 0; i < len; i++) {
@@ -523,6 +526,7 @@ static void inline mem_dump(uintptr_t addr, uintptr_t len)
 		sbi_printf("0x%x\t", *ptr++);
 	}
 	sbi_printf("\n[M mode mem_dump] end ------------------------\n");
+	//*/
 }
 
 static void section_copy(uintptr_t src_sfn, uintptr_t dst_sfn)
@@ -530,8 +534,8 @@ static void section_copy(uintptr_t src_sfn, uintptr_t dst_sfn)
 	// should use DMA on D1
 	uintptr_t dst_pa = dst_sfn << SECTION_SHIFT;
 	uintptr_t src_pa = src_sfn << SECTION_SHIFT;
-	sbi_printf("[M mode section copy] copying from 0x%lx to 0x%lx\n",
-		   src_pa, dst_pa);
+	// sbi_printf("[M mode section copy] copying from 0x%lx to 0x%lx\n",
+	// 	   src_pa, dst_pa);
 
 	sbi_memcpy((void *)dst_pa, (void *)src_pa, SECTION_SIZE);
 	// dma_copy(src_pa, dst_pa, SECTION_SIZE);
@@ -569,9 +573,9 @@ static inline void update_leaf_pte(uintptr_t pt_root, uintptr_t va,
 {
 	pte *entry = get_pte(pt_root, va);
 	// -----------
-	if (va <= 0x10000000)
-		sbi_printf("[M mode update_leaf_pte] va = 0x%lx, pa = 0x%lx\n",
-			   va, pa);
+	// if (va <= 0x10000000)
+	// 	sbi_printf("[M mode update_leaf_pte] va = 0x%lx, pa = 0x%lx\n",
+	// 		   va, pa);
 	// -----------
 	if (entry)
 		entry->ppn = pa >> EPAGE_SHIFT;
@@ -617,12 +621,14 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	uintptr_t satp;
 
 	// debug start -------
+	/*
 	sbi_printf("[M mode section_migration] src_pa = 0x%lx, dst_pa = 0x%lx, "
 		   "delta_addr = 0x%lx\n",
 		   src_pa, dst_pa, delta_addr);
 	sbi_printf("[M mode section_migration] eid = 0x%lx\n", eid);
 	sbi_printf("[M mode section_migration] linear_start_va = 0x%lx\n",
 		   linear_start_va);
+	//*/
 	// debug end   -------
 
 	if (eid < 0 || context == NULL) {
@@ -645,7 +651,7 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	// 1. judge whether the section contains a base module
 	if (src_sfn == SECTION_DOWN(pt_root_addr) >> SECTION_SHIFT) {
 		is_base_module = 1;
-		sbi_printf("[M mode section_migration] is base module\n");
+		// sbi_printf("[M mode section_migration] is base module\n");
 	}
 
 	// 2. Section content copy, set section va, owner
@@ -675,16 +681,16 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 		satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 		csr_write(CSR_SATP, satp);
 
-		sbi_printf(
-			"[M mode section_migration] offset_addr = 0x%lx, old value: 0x%lx ",
-			offset_addr, *(uintptr_t *)offset_addr);
+		// sbi_printf(
+		// 	"[M mode section_migration] offset_addr = 0x%lx, old value: 0x%lx ",
+		// 	offset_addr, *(uintptr_t *)offset_addr);
 		*(uintptr_t *)offset_addr -= delta_addr;
-		sbi_printf("new value: 0x%lx\n", *(uintptr_t *)offset_addr);
+		// sbi_printf("new value: 0x%lx\n", *(uintptr_t *)offset_addr);
 	}
 
 	// debug -----
-	sbi_printf("[M mode section_migration] new pt_root = 0x%lx @ 0x%lx\n",
-		   pt_root, pt_root_addr);
+	// sbi_printf("[M mode section_migration] new pt_root = 0x%lx @ 0x%lx\n",
+	// 	   pt_root, pt_root_addr);
 	// debug -----
 
 	// 4. Update page table
@@ -721,9 +727,9 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	free_section(src_sfn);
 
 	// debug start ----------
-	pte *tmp_pte1 = get_pte(pt_root, 0x1110eUL);
-	sbi_printf("[M mode section_migration] tmp_pte1: 0x%lx\n",
-		   *(uintptr_t *)tmp_pte1);
+	// pte *tmp_pte1 = get_pte(pt_root, 0x1110eUL);
+	// sbi_printf("[M mode section_migration] tmp_pte1: 0x%lx\n",
+	// 	   *(uintptr_t *)tmp_pte1);
 	// debug end  ----------
 
 	// 6. flush tlb, cache
@@ -740,10 +746,12 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 
 __unused static void dump_inverse_map(inverse_map *inv_map)
 {
+	/*
 	sbi_printf("[M mode dump_inverse_map] start-------------------\n");
 	for (int i = 0; i < INVERSE_MAP_ENTRY_NUM && inv_map[i].pa; i++) {
 		sbi_printf("%d: pa = %lx, va = %lx, count = %d\n", i,
 			   inv_map[i].pa, inv_map[i].va, inv_map[i].count);
 	}
 	sbi_printf("[M mode dump_inverse_map] end---------------------\n");
+	//*/
 }
