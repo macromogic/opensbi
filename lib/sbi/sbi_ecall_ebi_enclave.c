@@ -538,6 +538,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	pmp_switch(NULL);
 	restore_umode_context(into, regs);
 	restore_csr_context(into, regs);
+	regs->mepc += 4;
 
 #ifdef GLOBAL_DEBUG
 	dump_csr_context(into);
