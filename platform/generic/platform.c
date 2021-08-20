@@ -19,13 +19,16 @@
 #include <sbi_utils/irqchip/fdt_irqchip.h>
 #include <sbi_utils/serial/fdt_serial.h>
 #include <sbi_utils/timer/fdt_timer.h>
+#include <sbi_utils/gpio/fdt_gpio.h>
 #include <sbi_utils/ipi/fdt_ipi.h>
 #include <sbi_utils/reset/fdt_reset.h>
 
 extern const struct platform_override sifive_fu540;
+extern const struct platform_override sifive_fu740;
 
 static const struct platform_override *special_platforms[] = {
 	&sifive_fu540,
+	&sifive_fu740,
 };
 
 static const struct platform_override *generic_plat = NULL;
@@ -127,6 +130,8 @@ static int generic_early_init(bool cold_boot)
 
 	if (!cold_boot)
 		return 0;
+
+	fdt_gpio_init();
 
 	return fdt_reset_init();
 }

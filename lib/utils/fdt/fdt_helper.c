@@ -5,7 +5,6 @@
  *
  * Copyright (C) 2020 Bin Meng <bmeng.cn@gmail.com>
  */
-
 #include <libfdt.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_console.h>
@@ -460,6 +459,56 @@ int fdt_parse_compat_addr(void *fdt, unsigned long *addr,
 	rc = fdt_get_node_addr_size(fdt, nodeoffset, addr, NULL);
 	if (rc < 0 || !addr)
 		return SBI_ENODEV;
+
+	return 0;
+}
+
+int fdt_parse_gpio_pwroff(void *fdt, struct poweroff_gpio *pwroff,
+			  const char* compatible)
+{
+	int pwroff_offset;
+
+	pwroff_offset = fdt_path_offset(fdt, compatible);
+	if (pwroff_offset >= 0) {
+		int len;
+		const char *pwroff_cmpt;
+
+		pwroff_cmpt = fdt_getprop(fdt, pwroff_offset, "compatible", &len);
+
+		if (pwroff_cmpt && !sbi_strcmp("gpio-poweroff", pwroff_cmpt)) {
+			const fdt32_t *val;
+
+			val = fdt_getprop(fdt, pwroff_offset,
+					  "active-delay-ms", &len);
+			if (val)
+				pwroff->act_delay = fdt32_to_cpu(*val);
+
+			val = fdt_getprop(fdt, pwroff_offset, "gpios", &len);
+			if (val) {
+				pwroff->gpio = fdt32_to_cpu(val[1]);
+				pwroff->output_type = fdt32_to_cpu(val[2]);
+
+				return 0;
+			}
+		}
+	}
+
+	return SBI_EINVAL;
+}
+
+int fdt_parse_gpio_node(void *fdt, int nodeoffset,
+			struct platform_gpio_data *gpio)
+{
+	int rc;
+	unsigned long reg_addr, reg_size;
+
+	if (nodeoffset < 0 || !gpio || !fdt)
+		return SBI_ENODEV;
+
+	rc = fdt_get_node_addr_size(fdt, nodeoffset, &reg_addr, &reg_size);
+	if (rc < 0 || !reg_addr || !reg_size)
+		return SBI_ENODEV;
+	gpio->addr = reg_addr;
 
 	return 0;
 }

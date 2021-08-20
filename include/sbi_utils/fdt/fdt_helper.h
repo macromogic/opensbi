@@ -12,6 +12,17 @@
 
 #include <sbi/sbi_types.h>
 
+enum gpio_output_type {
+	GPIO_ACTIVE_HIGH = 0,
+	GPIO_ACTIVE_LOW,
+};
+
+struct poweroff_gpio {
+	unsigned int act_delay;			/* in ms */
+	int gpio;				/* GPIO No */
+	enum gpio_output_type output_type;	/* output type */
+};
+
 struct fdt_match {
 	const char *compatible;
 	void *data;
@@ -23,6 +34,10 @@ struct platform_uart_data {
 	unsigned long baud;
 	unsigned long reg_shift;
 	unsigned long reg_io_width;
+};
+
+struct platform_gpio_data {
+	unsigned long addr;
 };
 
 const struct fdt_match *fdt_match_node(void *fdt, int nodeoff,
@@ -64,5 +79,11 @@ int fdt_parse_clint_node(void *fdt, int nodeoffset, bool for_timer,
 
 int fdt_parse_compat_addr(void *fdt, unsigned long *addr,
 			  const char *compatible);
+
+int fdt_parse_gpio_pwroff(void *fdt, struct poweroff_gpio *pwroff,
+			  const char* compatible);
+
+int fdt_parse_gpio_node(void *fdt, int nodeoffset,
+			struct platform_gpio_data *gpio);
 
 #endif /* __FDT_HELPER_H__ */
