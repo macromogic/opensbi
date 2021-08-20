@@ -1,0 +1,12 @@
+#/bin/sh
+
+ITB_DIR=${ITB_DIR:=$PWD}
+MACHINE=${MACHINE:-unmatched}
+BASEDIR=$(dirname "$0")
+
+if [ -e ${ITB_DIR}/u-boot.itb ]
+then
+  rm ${ITB_DIR}/u-boot.itb
+fi
+cd ${BASEDIR}/${MACHINE}
+../mkimage -E -f u-boot.its ${ITB_DIR}/u-boot.itb
