@@ -1,13 +1,12 @@
 #include <sbi/sbi_ecall.h>
 #include <sbi/sbi_ecall_interface.h>
-#include <sbi/sbi_ecall_ebi_enclave.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_version.h>
 #include <sbi/riscv_asm.h>
 #include <sbi/sbi_console.h>
-#include <sbi/sbi_ecall_ebi_mem.h>
-#include <sbi/dummy_debug.h>
+#include <sbi/ebi/enclave.h>
+#include <sbi/ebi/memory.h>
 
 extern char _base_start, _base_end;
 extern char _enclave_start, _enclave_end;
@@ -17,135 +16,88 @@ static int hartid_to_eid(int hartid)
 	return enclave_on_core[hartid];
 }
 
-#pragma GCC diagnostic ignored "-Wdiscarded-qualifiers"
-#pragma GCC diagnostic push
 static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 				 struct sbi_trap_regs *regs,
 				 unsigned long *out_val,
 				 struct sbi_trap_info *out_trap)
 {
-	int ret			 = 0;
-	unsigned long core	 = csr_read(mhartid);
-	ulong mepc		 = csr_read(CSR_MEPC);
-	int eid			 = hartid_to_eid(core);
-	enclave_context *context = &enclaves[eid];
+	int ret			= 0;
+	ulong core		= csr_read(CSR_MHARTID);
+	ulong mepc		= csr_read(CSR_MEPC);
+	int eid			= hartid_to_eid(core);
+	enclave_context_t *ectx = &enclaves[eid];
 
-#ifdef GLOBAL_DEBUG
-	uintptr_t linux_satp = csr_read(CSR_SATP); //debu
-#endif
+#ifdef EBI_DEBUG
+	uintptr_t linux_satp = csr_read(CSR_SATP); //debug
 	uintptr_t va, pa;
+#endif
 
 	switch (funcid) {
 	case SBI_EXT_EBI_CREATE:
-#ifdef GLOBAL_DEBUG
-		sbi_printf("[sbi_ecall_ebi_handler] linux satp = 0x%lx\n",
-			   linux_satp);
-		sbi_printf("[sbi_ecall_ebi_handler] SBI_EXT_EBI_CREATE\n");
-		sbi_printf(
-			"[sbi_ecall_ebi_handler] extid = %lu, funcid = 0x%lx, args[0] = 0x%lx, args[1] = 0x%lx, core = %lu\n",
+		sbi_debug("linux satp = 0x%lx\n", linux_satp);
+		sbi_debug("SBI_EXT_EBI_CREATE\n");
+		sbi_debug(
+			"extid = %lu, funcid = 0x%lx, args[0] = 0x%lx, args[1] = 0x%lx, core = %lu\n",
 			extid, funcid, regs->a0, regs->a1, core);
-		sbi_printf(
-			"[sbi_ecall_ebi_handler] _base_start @ %p, _base_end @ %p\n",
-			&_base_start, &_base_end);
-		sbi_printf(
-			"[sbi_ecall_ebi_handler] _enclave_start @ %p, _enclave_end @ %p\n",
-			&_enclave_start, &_enclave_end);
-#endif
-
-		// #ifdef GLOBAL_DEBUG
-		// 		sbi_printf("handle syscall %d %lx %lx at core %ld\n",
-		// 			   (int)extid, args[0], args[1], core);
-		// 		sbi_printf("Enclave Created: %lx %lx %lx\n", args[0], args[1],
-		// 			   args[2]);
-		// 		sbi_printf("base_start @ %p\n", &_base_start);
-		// #endif
-		// regs[A0_INDEX] = create_enclave(regs, mepc);
-		//write_csr(mepc, mepc + 4); // Avoid repeatedly enter the trap handler
+		sbi_debug("_base_start @ %p, _base_end @ %p\n", &_base_start,
+			  &_base_end);
+		sbi_debug("_enclave_start @ %p, _enclave_end @ %p\n",
+			  &_enclave_start, &_enclave_end);
 		ret = create_enclave(regs, mepc);
-#ifdef GLOBAL_DEBUG
-		sbi_printf("[sbi_ecall_ebi_handler] after create_enclave\n");
-		sbi_printf("[sbi_ecall_ebi_handler] regs->a1 = %lx\n",
-			   regs->a1);
-		sbi_printf("[sbi_ecall_ebi_handler] regs->a2 = %lx\n",
-			   regs->a2);
-		sbi_printf("[sbi_ecall_ebi_handler] regs->a3 = %lx\n",
-			   regs->a3);
-		sbi_printf("[sbi_ecall_ebi_handler] regs->a4 = %lx\n",
-			   regs->a4);
-		sbi_printf("[sbi_ecall_ebi_handler] regs->a5 = %lx\n",
-			   regs->a5);
-		sbi_printf("[sbi_ecall_ebi_handler] regs->a6 = %lx\n",
-			   regs->a6);
-		sbi_printf("[sbi_ecall_ebi_handler] mepc=%lx, mstatus=%lx\n",
-			   csr_read(CSR_MEPC), csr_read(CSR_MSTATUS));
-#endif
+		sbi_debug("after create_enclave\n");
+		sbi_debug("regs->a1 = %lx\n", regs->a1);
+		sbi_debug("regs->a2 = %lx\n", regs->a2);
+		sbi_debug("regs->a3 = %lx\n", regs->a3);
+		sbi_debug("regs->a4 = %lx\n", regs->a4);
+		sbi_debug("regs->a5 = %lx\n", regs->a5);
+		sbi_debug("regs->a6 = %lx\n", regs->a6);
+		sbi_debug("mepc=%lx, mstatus=%lx\n", csr_read(CSR_MEPC),
+			  csr_read(CSR_MSTATUS));
 		return ret;
 
 	case SBI_EXT_EBI_ENTER:
-#ifdef GLOBAL_DEBUG
-		sbi_printf("[sbi_ecall_ebi_handler] enter\n");
-#endif
+		sbi_debug("enter\n");
 		enter_enclave(regs, mepc);
-#ifdef GLOBAL_DEBUG
-		sbi_printf("[sbi_ecall_ebi_handler] back from enter_enclave\n");
-		sbi_printf(
-			"[sbi_ecall_ebi_handler] id = %lx, into->pa: 0x%lx\n",
-			regs->a1, regs->a2);
-#endif
+		sbi_debug("back from enter_enclave\n");
+		sbi_debug("id = %lx, into->pa: 0x%lx\n", regs->a1, regs->a2);
 		return ret;
+
 	case SBI_EXT_EBI_EXIT:
-#ifdef GLOBAL_DEBUG
-		sbi_printf("[M mode sbi_ecall_ebi_handler] enclave %lx exit\n",
-			   regs->a0);
-#endif
+		sbi_debug("enclave %lx exit\n", regs->a0);
 		exit_enclave(regs);
 		return ret;
 
 	case SBI_EXT_EBI_PERI_INFORM:
-		inform_peri(regs);
+		inform_peripheral(regs);
 		return ret;
 
 	case SBI_EXT_EBI_MEM_ALLOC:
-#ifdef GLOBAL_DEBUG
-		sbi_printf(
-			"[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MEM_ALLOC\n");
-#endif
+		sbi_debug("SBI_EXT_EBI_MEM_ALLOC\n");
 		va = regs->a0;
-		pa = alloc_section_for_enclave(
-			context, va); // pa should be passed to enclave by regs
+		// pa should be passed to enclave by regs
+		pa = alloc_section_for_enclave(ectx, va);
 		if (pa) {
 			regs->a1 = pa;
 			regs->a2 = SECTION_SIZE;
 		} else {
-			sbi_printf(
-				"[M mode SBI_EXT_EBI_MEM_ALLOC] allocation failed\n");
+			sbi_error("allocation failed\n");
 			exit_enclave(regs);
 		}
 		return ret;
 
 	case SBI_EXT_EBI_MAP_REGISTER:
-#ifdef GLOBAL_DEBUG
-		sbi_printf(
-			"[M mode sbi_ecall_ebi_handler] SBI_EXT_EBI_MAP_REGISTER\n");
-		sbi_printf("[M mode sbi_ecall_ebi_handler] "
-			   "&pt_root = 0x%lx\n",
-			   regs->a0);
-		sbi_printf("[M mode sbi_ecall_ebi_handler] "
-			   "&inv_map = 0x%lx\n",
-			   regs->a1);
-		sbi_printf("[M mode sbi_ecall_ebi_handler] "
-			   "&ENC_VA_PA_OFFSET = 0x%lx\n",
-			   regs->a2);
+		sbi_debug("SBI_EXT_EBI_MAP_REGISTER\n");
+		sbi_debug("&pt_root = 0x%lx\n", regs->a0);
+		sbi_debug("&inv_map = 0x%lx\n", regs->a1);
+		sbi_debug("&ENC_VA_PA_OFFSET = 0x%lx\n", regs->a2);
 		if (!(regs->a0 && regs->a1 && regs->a2)) {
-			sbi_printf(
-				"[M mode sbi_ecall_ebi_handler] invalid ecall, check input\n");
+			sbi_error("Invalid ecall, check input\n");
+			ret = SBI_ERR_INVALID_PARAM;
 			return ret;
 		}
-#endif
-
-		context->pt_root_addr	  = regs->a0;
-		context->inverse_map_addr = regs->a1;
-		context->offset_addr	  = regs->a2;
+		ectx->pt_root_addr     = regs->a0;
+		ectx->inverse_map_addr = regs->a1;
+		ectx->offset_addr      = regs->a2;
 		return ret;
 
 	case SBI_EXT_EBI_FLUSH_DCACHE:
@@ -161,13 +113,9 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 
 	return ret;
 }
-#pragma GCC diagnostic pop
 
-#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-#pragma GCC diagnostic push
 struct sbi_ecall_extension ecall_ebi = {
 	.extid_start = SBI_EXT_EBI,
 	.extid_end   = SBI_EXT_EBI,
 	.handle	     = sbi_ecall_ebi_handler,
 };
-#pragma GCC diagnostic pop

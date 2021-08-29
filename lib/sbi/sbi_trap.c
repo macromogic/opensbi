@@ -19,6 +19,7 @@
 #include <sbi/sbi_scratch.h>
 #include <sbi/sbi_timer.h>
 #include <sbi/sbi_trap.h>
+#include <sbi/ebi/util.h>
 
 static void __noreturn sbi_trap_error(const char *msg, int rc, ulong mcause,
 				      ulong mtval, ulong mtval2, ulong mtinst,
@@ -254,13 +255,11 @@ void sbi_trap_handler(struct sbi_trap_regs *regs)
 	case CAUSE_SUPERVISOR_ECALL:
 	case CAUSE_MACHINE_ECALL:
 	case CAUSE_USER_ECALL:
-		rc  = sbi_ecall_handler(regs);
-		/*
+		rc = sbi_ecall_handler(regs);
 		if (regs->a7 == SBI_EXT_EBI) {
-			sbi_printf("[sbi_trap] After EBI call rc=%d, mepc=%lx\n", rc,
-				   regs->mepc);
+			sbi_debug("After EBI call rc=%d, mepc=%lx\n", rc,
+				  regs->mepc);
 		}
-		//*/
 		msg = "ecall handler failed";
 		break;
 	default:
@@ -273,9 +272,6 @@ void sbi_trap_handler(struct sbi_trap_regs *regs)
 		rc	   = sbi_trap_redirect(regs, &trap);
 		break;
 	};
-
-	// if (regs->a7 == 0x19260817)
-	// 	sbi_printf("[sbi_trap_handler] rc = %d\n", rc);
 
 trap_error:
 	if (rc)

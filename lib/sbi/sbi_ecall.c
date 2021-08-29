@@ -15,8 +15,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/riscv_encoding.h>
 #include <sbi/riscv_asm.h>
-#include <sbi/sbi_ecall_ebi_enclave.h>
-#include <sbi/dummy_debug.h>
+#include <sbi/ebi/enclave.h>
 
 u16 sbi_ecall_version_major(void)
 {
@@ -110,28 +109,20 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 	unsigned long out_val	   = 0;
 	bool is_0_1_spec	   = 0;
 
-#ifdef GLOBAL_DEBUG
 	if (extension_id == SBI_EXT_EBI) {
-		sbi_printf(
-			"[sbi_ecall_handler] Calling EBI with function ID=%lu\n",
-			func_id);
+		sbi_debug("Calling EBI with function ID=%lu\n", func_id);
 	}
-#endif
 
-	ulong mcause	= csr_read(CSR_MCAUSE);
-	ulong mtval	= csr_read(CSR_MTVAL);
-	ulong mtval2	= 0;
-	ulong mtinst	= 0;
 	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
-	if (prev_mode == 0 && extension_id != SBI_EXT_EBI) {
+	if (prev_mode == PRV_U && extension_id != SBI_EXT_EBI) {
 		// The U-mode ecall is a system call if a7 is not SBI_EXT_EBI
 		trap.epc   = regs->mepc;
-		trap.cause = mcause;
-		trap.tval  = mtval;
-		trap.tval2 = mtval2;
-		trap.tinst = mtinst;
-		sbi_trap_redirect(regs, &trap);
-		return 0;
+		trap.cause = csr_read(CSR_MCAUSE);
+		trap.tval  = csr_read(CSR_MTVAL);
+		// H-mode is not considered
+		trap.tval2 = 0;
+		trap.tinst = 0;
+		return sbi_trap_redirect(regs, &trap);
 	}
 
 	ext = sbi_ecall_find_extension(extension_id);
@@ -144,20 +135,17 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		ret = SBI_ENOTSUPP;
 	}
 
-#ifdef GLOBAL_DEBUG
 	if (extension_id == SBI_EXT_EBI) {
-		sbi_printf("[sbi_ecall_handler] EBI ret = %d\n", ret);
+		sbi_debug("EBI ret = %d\n", ret);
 	}
-#endif
 
 	if (ret == SBI_ETRAP) {
 		trap.epc = regs->mepc;
 		sbi_trap_redirect(regs, &trap);
 	} else {
 		if (ret < SBI_LAST_ERR) {
-			sbi_printf("%s: Invalid error %d for ext=0x%lx "
-				   "func=0x%lx\n",
-				   __func__, ret, extension_id, func_id);
+			sbi_error("Invalid error %d for ext=0x%lx func=0x%lx\n",
+				  ret, extension_id, func_id);
 			ret = SBI_ERR_FAILED;
 		}
 
@@ -170,35 +158,28 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		 * case should be handled differently.
 		 */
 
-#ifdef GLOBAL_DEBUG
 		if (extension_id == SBI_EXT_EBI)
-			sbi_printf("[sbi_ecall_handler] Ding\n");
-#endif
+			sbi_debug("Ding\n");
 		regs->mepc += 4;
 		if (extension_id != SBI_EXT_EBI) {
 			regs->a0 = ret;
 			if (!is_0_1_spec)
 				regs->a1 = out_val;
 		}
-#ifdef GLOBAL_DEBUG
 		if (extension_id == SBI_EXT_EBI)
-			sbi_printf("[sbi_ecall_handler] Dong\n");
-#endif
+			sbi_debug("Dong\n");
 	}
 
-#ifdef GLOBAL_DEBUG
 	if (extension_id == SBI_EXT_EBI) {
-		sbi_printf("[sbi_ecall_handler] Ret\n");
-		sbi_printf("[sbi_ecall_handler] regs->a1 = %lx\n", regs->a1);
-		sbi_printf("[sbi_ecall_handler] regs->a2 = %lx\n", regs->a2);
-		sbi_printf("[sbi_ecall_handler] regs->a3 = %lx\n", regs->a3);
-		sbi_printf("[sbi_ecall_handler] regs->a4 = %lx\n", regs->a4);
-		sbi_printf("[sbi_ecall_handler] regs->a5 = %lx\n", regs->a5);
-		sbi_printf("[sbi_ecall_handler] regs->a6 = %lx\n", regs->a6);
-		sbi_printf("[sbi_ecall_handler] mepc=%lx, mstatus=%lx\n",
-			   regs->mepc, regs->mstatus);
+		sbi_debug("Ret\n");
+		sbi_debug("regs->a1 = %lx\n", regs->a1);
+		sbi_debug("regs->a2 = %lx\n", regs->a2);
+		sbi_debug("regs->a3 = %lx\n", regs->a3);
+		sbi_debug("regs->a4 = %lx\n", regs->a4);
+		sbi_debug("regs->a5 = %lx\n", regs->a5);
+		sbi_debug("regs->a6 = %lx\n", regs->a6);
+		sbi_debug("mepc=%lx, mstatus=%lx\n", regs->mepc, regs->mstatus);
 	}
-#endif
 
 	return 0;
 }

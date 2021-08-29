@@ -1,6 +1,0 @@
-#ifndef DUMMY_GLOBAL_DEBUG
-#define DUMMY_GLOBAL_DEBUG
-
-#define GLOBAL_DEBUG
-
-#endif // DUMMY_GLOBAL_DEBUG
