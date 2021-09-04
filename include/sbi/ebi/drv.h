@@ -6,6 +6,8 @@
 #define MAX_DRV 64
 #define CMD_QUERY_INFO -1
 
+#ifndef __ASSEMBLER__
+
 typedef uintptr_t (*cmd_handler)(uintptr_t, uintptr_t, uintptr_t, uintptr_t);
 
 typedef struct {
@@ -19,8 +21,10 @@ typedef struct {
 	int using_by; // May be removed
 } drv_addr_t;
 
-extern drv_addr_t drv_addr_list[MAX_DRV];
+extern drv_addr_t *drv_addr_list;
 uintptr_t drv_copy(uintptr_t *dst_addr, uintptr_t drv_mask);
 void inform_peripheral(struct sbi_trap_regs *regs);
+
+#endif // __ASSEMBLER__
 
 #endif // EBI_DRV_H

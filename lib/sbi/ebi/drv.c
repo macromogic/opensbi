@@ -4,8 +4,9 @@
 #include <sbi/riscv_asm.h>
 
 extern char _console_start, _console_end;
-drv_addr_t drv_addr_list[MAX_DRV] = { { (uintptr_t)&_console_start,
-					(uintptr_t)&_console_end, -1 } };
+drv_addr_t local_drv_addr_list[MAX_DRV] = { { (uintptr_t)&_console_start,
+					      (uintptr_t)&_console_end, -1 } };
+drv_addr_t *drv_addr_list = local_drv_addr_list; // Tricky! Do not change this!
 
 uintptr_t drv_copy(uintptr_t *dst_addr, uintptr_t drv_mask)
 {

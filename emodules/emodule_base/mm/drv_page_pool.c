@@ -12,28 +12,20 @@ static uintptr_t alloc_mem_from_m(struct pg_list *pool);
 // valid before mmu turned on
 static void dump_mem_pool(struct pg_list *pool)
 {
-#ifdef EMODULE_GLOBAL_DEBUG
 	print_color("[S mode dump_mem_pool]start---------------------------");
 	printd("pool %p\n", pool);
-#endif
 	uintptr_t cur = pool->head;
 	int cnt	      = 1;
 	while (cur && cnt <= 36) {
-#ifdef EMODULE_GLOBAL_DEBUG
 		printd("0x%x ", cur);
-#endif
 		if (!read_csr(satp))
 			cur -= ENC_VA_PA_OFFSET;
 		cur = NEXT_PAGE(cur);
-#ifdef EMODULE_GLOBAL_DEBUG
 		if (cnt++ % 18 == 0)
 			printd("\n");
-#endif
 	}
-#ifdef EMODULE_GLOBAL_DEBUG
 	printd("\n");
 	print_color("[S mode dump_mem_pool]end-----------------------------");
-#endif
 }
 
 uintptr_t va_pa_offset()
@@ -67,10 +59,8 @@ void __spa_put(uintptr_t pa, struct pg_list *pool)
 		prev		= pool->tail - va_pa_offset_no_mmu();
 		NEXT_PAGE(prev) = va;
 	} else {
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("[S mode __spa_put] list empty, head set to 0x%lx, va_top: 0x%lx\n",
-		       va, va_top);
-#endif
+		em_debug("List empty, head set to 0x%lx, va_top: 0x%lx\n", va,
+			 va_top);
 		pool->head = va;
 	}
 
@@ -85,12 +75,10 @@ uintptr_t __spa_get(struct pg_list *pool)
 {
 	uintptr_t page, ret, next;
 	if (LIST_EMPTY(pool)) {
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("[S mode __spa_get] pool tail = 0x%lx\n", pool->tail);
-#endif
+		em_debug("Pool tail = 0x%lx\n", pool->tail);
 		ret = alloc_mem_from_m(pool);
 		if (!ret) {
-			printd("[S mode __spa_get] alloc ERROR\n");
+			em_error("Ret=%d\n", ret);
 			return -1;
 		}
 	}
@@ -107,9 +95,7 @@ uintptr_t __spa_get(struct pg_list *pool)
 // should be invoked before mmu gets turned on (only once)
 void spa_init(uintptr_t base, size_t size, char id)
 {
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode spa_init] initializing page pool %d\n", (int)id);
-#endif
+	em_debug("Initializing page pool %d\n", (int)id);
 
 	uintptr_t cur;
 	struct pg_list *pool = page_pools + id;
@@ -120,6 +106,7 @@ void spa_init(uintptr_t base, size_t size, char id)
 
 	dump_mem_pool(pool);
 }
+
 void spa_put(uintptr_t addr, char id)
 {
 	__spa_put(addr, page_pools + id);
@@ -158,20 +145,16 @@ static uintptr_t alloc_mem_from_m(struct pg_list *pool)
 	SBI_CALL5(SBI_EXT_EBI, va_top, 0, 0, EBI_MEM_ALLOC);
 	asm volatile("mv %0, a1" : "=r"(addr)); // return value
 	asm volatile("mv %0, a2" : "=r"(size));
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode alloc_mem_from_m] mem alloc result: allocated section pa: 0x%lx, size: 0x%lx\n",
-	       addr, size);
-#endif
+	em_debug("mem alloc result: allocated section pa: 0x%lx, size: 0x%lx\n",
+		 addr, size);
 
 	if (!addr) {
-		printd("[S mode alloc_mem_from_m] alloc ERROR\n");
+		em_error("addr is NULL\n");
 		return 0;
 	}
 
 	// linearly map the allocated memory by va_pa_offset
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode alloc_mem_from_m] va_top = 0x%lx\n", va_top);
-#endif
+	em_debug("va_top = 0x%lx\n", va_top);
 	map_page(NULL, va_top, addr, size >> EPAGE_SHIFT,
 		 PTE_V | PTE_W | PTE_R);
 
@@ -184,7 +167,7 @@ static uintptr_t alloc_mem_from_m(struct pg_list *pool)
 	}
 
 	if (LIST_EMPTY(pool))
-		printd("[S mode alloc_mem_from_m] something went wrong\n");
+		em_error("Pool is empty?\n");
 
 	pool_size = pool->count;
 	// printd("[S mode alloc_mem_from_m] pool size is now: 0x%x\n", pool_size);

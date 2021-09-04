@@ -1,11 +1,11 @@
-#ifndef __MD2_H
-#define __MD2_H
+#ifndef MD2_H
+#define MD2_H
 
 #include "drv_base.h"
 
 #define MD2_BLOCK_SIZE 16
 
-struct md2_context {
+typedef struct md2_context {
 	uint8_t hash_buf[MD2_BLOCK_SIZE];
 	uint8_t blk1[MD2_BLOCK_SIZE], blk2[MD2_BLOCK_SIZE];
 
@@ -15,16 +15,9 @@ struct md2_context {
 	} last;
 
 	uint8_t checksum[MD2_BLOCK_SIZE];
-};
+} md2ctx_t;
 
 enum md2_state { MD2_OK, MD2_ERR, MD2_NULLPTR };
-
-#define CLEAR_64BITS(p) *((uint64_t *)(p)) = 0x0
-#define CLEAR_BLOCK(p)             \
-	CLEAR_64BITS((void *)(p)); \
-	CLEAR_64BITS((void *)(p) + 8)
-
-typedef struct md2_context md2ctx_t;
 
 int md2_init(md2ctx_t *ctx);
 int md2_update(md2ctx_t *ctx, const void *data, size_t size);
@@ -58,4 +51,4 @@ __attribute__((unused)) static char *uint8_map[] = {
 
 #define UINT8_TO_STR(num) (uint8_map[(num)&255])
 
-#endif // __MD2_H
+#endif // MD2_H

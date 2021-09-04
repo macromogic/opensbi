@@ -45,7 +45,7 @@ void init_memory_pool(void)
 	SPIN_LOCK_INIT(&memory_pool_lock);
 
 	sbi_debug("memory pool init successed!"
-		  "start = 0x%x, end = 0x%lx, num = %lu\n",
+		  "start = 0x%lx, end = 0x%lx, num = %lu\n",
 		  MEMORY_POOL_START, MEMORY_POOL_END, MEMORY_POOL_SECTION_NUM);
 }
 

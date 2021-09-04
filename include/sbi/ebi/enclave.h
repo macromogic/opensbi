@@ -3,10 +3,15 @@
 
 #include <sbi/ebi/util.h>
 #include <sbi/ebi/drv.h>
-#include <sbi/riscv_locks.h>
 
 #define PERI_NUM_MAX 128
 
+#define NUM_ENCLAVE 180
+#define NUM_CORES 10
+
+#ifndef __ASSEMBLER__
+
+#include <sbi/riscv_locks.h>
 typedef enum {
 	ENC_FREE, // Unused/unloaded
 	ENC_LOAD, // Loaded, but not started
@@ -46,9 +51,6 @@ typedef struct {
 	pmp_region pmp_reg[PMP_REGION_MAX];
 } enclave_context_t;
 
-#define NUM_ENCLAVE 180
-#define NUM_CORES 10
-
 extern enclave_context_t enclaves[NUM_ENCLAVE + 1];
 extern int enclave_on_core[NUM_CORES];
 extern spinlock_t enclave_lock, core_lock;
@@ -60,5 +62,7 @@ extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);
 extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
 extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
 enclave_context_t *eid_to_context(uintptr_t eid);
+
+#endif // __ASSEMBLER__
 
 #endif // EBI_ENCLAVE_H

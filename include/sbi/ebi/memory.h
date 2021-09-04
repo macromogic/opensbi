@@ -2,7 +2,6 @@
 #define EBI_MEMORY_H
 
 #include <sbi/ebi/enclave.h>
-#include <sbi/riscv_locks.h>
 
 #define PAGE_FREE 0x0
 #define PAGE_USED 0x1
@@ -49,14 +48,16 @@
 #define MASK_L2 0x7fc0000000
 
 // make sure these addresses are section aligned
-#define MEMORY_POOL_START 0xE0000000
-#define MEMORY_POOL_END 0x4BF800000
+#define MEMORY_POOL_START 0xE0000000UL
+#define MEMORY_POOL_END 0x4BF800000UL
 #define MEMORY_POOL_SECTION_NUM \
 	((MEMORY_POOL_END - MEMORY_POOL_START) >> SECTION_SHIFT)
 
 #define INVERSE_MAP_ENTRY_NUM 1024
 #define PAGE_DIR_POOL 256
 
+#ifndef __ASSEMBLER__
+#include <sbi/riscv_locks.h>
 typedef struct pte {
 	uint32_t pte_v : 1;
 	uint32_t pte_r : 1;
@@ -71,7 +72,7 @@ typedef struct pte {
 	uintptr_t __unused_value : 10;
 } pte_t;
 
-typedef struct {
+typedef struct section {
 	uintptr_t sfn; // section frame number
 	int owner;     // enclave id of the owner. -1 if unused.
 	uintptr_t va;  // linearly mapped addr of the section
@@ -80,7 +81,7 @@ typedef struct {
 extern section_t memory_pool[MEMORY_POOL_SECTION_NUM];
 extern spinlock_t memory_pool_lock;
 
-typedef struct {
+typedef struct inverse_map {
 	uintptr_t pa;
 	uintptr_t va;
 	uint32_t count;
@@ -94,5 +95,7 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn);
 void memcpy_from_user(uintptr_t maddr, uintptr_t uaddr, uintptr_t size,
 		      uintptr_t mepc);
 void debug_memdump(uintptr_t addr, size_t size);
+
+#endif // __ASSEMBLER__
 
 #endif // EBI_MEMORY_H

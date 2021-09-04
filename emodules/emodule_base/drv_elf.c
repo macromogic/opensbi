@@ -21,9 +21,7 @@ uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id,
 	Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf_addr;
 
 	Elf64_Phdr *phdr_arr = (Elf64_Phdr *)(elf_addr + ehdr->e_phoff);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("there are %d program header\n", ehdr->e_phnum);
-#endif
+	em_debug("There are %d program header\n", ehdr->e_phnum);
 	Elf64_Phdr phdr;
 	uintptr_t n_pages;
 	for (int i = 0; i < ehdr->e_phnum; i++) {
@@ -31,11 +29,9 @@ uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id,
 		switch (phdr.p_type) {
 		case PT_LOAD: {
 			n_pages = (PAGE_UP(phdr.p_filesz) >> EPAGE_SHIFT) + 1;
-#ifdef EMODULE_GLOBAL_DEBUG
-			printd("mapping %d page from %x to %x\n", n_pages,
-			       PAGE_DOWN(phdr.p_vaddr),
-			       PAGE_DOWN(elf_addr + phdr.p_offset));
-#endif
+			em_debug("Mapping %d page from %x to %x\n", n_pages,
+				 PAGE_DOWN(phdr.p_vaddr),
+				 PAGE_DOWN(elf_addr + phdr.p_offset));
 			map_page(NULL, PAGE_DOWN(phdr.p_vaddr),
 				 PAGE_DOWN(elf_addr + phdr.p_offset), n_pages,
 				 PTE_U | __pt2pte(phdr.p_flags));
@@ -79,21 +75,21 @@ uintptr_t elf_check(uintptr_t elf_addr)
 	char *p_elf = (char *)elf_addr;
 	if (p_elf[0] != '\x7f' || p_elf[1] != 'E' || p_elf[2] != 'L' ||
 	    p_elf[3] != 'F') {
-		printd("not elf file");
+		em_error("Not ELF file\n");
 		return EBI_ERROR;
 	}
 	char xlen = p_elf[4] == ELFCLASS64 ? 64 : 32;
 	if (xlen != 64) {
-		printd("not 64-bits file");
+		em_error("Not 64-bits file\n");
 		return EBI_ERROR;
 	}
 	Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf_addr;
 	if (ehdr->e_type != ET_EXEC) {
-		printd("not executable file");
+		em_error("Not executable file\n");
 		return EBI_ERROR;
 	}
 	if (ehdr->e_machine != EM_RISCV) {
-		printd("invalid machine platform");
+		em_error("Invalid machine platform\n");
 		return EBI_ERROR;
 	}
 	return EBI_OK;

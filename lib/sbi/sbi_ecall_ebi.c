@@ -33,7 +33,7 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 #endif
 
 	switch (funcid) {
-	case SBI_EXT_EBI_CREATE:
+	case EBI_CREATE:
 		sbi_debug("linux satp = 0x%lx\n", linux_satp);
 		sbi_debug("SBI_EXT_EBI_CREATE\n");
 		sbi_debug(
@@ -55,23 +55,23 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 			  csr_read(CSR_MSTATUS));
 		return ret;
 
-	case SBI_EXT_EBI_ENTER:
+	case EBI_ENTER:
 		sbi_debug("enter\n");
 		enter_enclave(regs, mepc);
 		sbi_debug("back from enter_enclave\n");
 		sbi_debug("id = %lx, into->pa: 0x%lx\n", regs->a1, regs->a2);
 		return ret;
 
-	case SBI_EXT_EBI_EXIT:
+	case EBI_EXIT:
 		sbi_debug("enclave %lx exit\n", regs->a0);
 		exit_enclave(regs);
 		return ret;
 
-	case SBI_EXT_EBI_PERI_INFORM:
+	case EBI_PERI_INFORM:
 		inform_peripheral(regs);
 		return ret;
 
-	case SBI_EXT_EBI_MEM_ALLOC:
+	case EBI_MEM_ALLOC:
 		sbi_debug("SBI_EXT_EBI_MEM_ALLOC\n");
 		va = regs->a0;
 		// pa should be passed to enclave by regs
@@ -85,7 +85,7 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 		}
 		return ret;
 
-	case SBI_EXT_EBI_MAP_REGISTER:
+	case EBI_MAP_REGISTER:
 		sbi_debug("SBI_EXT_EBI_MAP_REGISTER\n");
 		sbi_debug("&pt_root = 0x%lx\n", regs->a0);
 		sbi_debug("&inv_map = 0x%lx\n", regs->a1);
@@ -100,12 +100,12 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 		ectx->offset_addr      = regs->a2;
 		return ret;
 
-	case SBI_EXT_EBI_FLUSH_DCACHE:
+	case EBI_FLUSH_DCACHE:
 		asm volatile(".long 0xFC000073"); // cflush.d.l1 zero
 		// TODO Clean L2?
 		return ret;
 
-	case SBI_EXT_EBI_DISCARD_DCACHE:
+	case EBI_DISCARD_DCACHE:
 		asm volatile(".long 0xFC200073"); // cdiscard.d.l1 zero
 		// TODO Clean L2?
 		return ret;

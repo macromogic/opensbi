@@ -37,28 +37,18 @@ int ebi_brk(uintptr_t addr)
 	uintptr_t n_pages, pa;
 	if (addr == 0)
 		return prog_brk;
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("####### brk start, prog_brk: 0x%lx########\n", prog_brk);
-	printd("addr: 0x%lx\n", addr);
-#endif
+	em_debug("####### brk start, prog_brk: 0x%lx########\n", prog_brk);
+	em_debug("addr: 0x%lx\n", addr);
 	if (addr > PAGE_UP(prog_brk)) { // currently freeing does not work
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("ebi_brk cp 1\n");
-#endif
+		em_debug("ebi_brk cp 1\n");
 		n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("ebi_brk cp 2 n_pages = 0x%lx\n", n_pages);
-#endif
+		em_debug("ebi_brk cp 2 n_pages = 0x%lx\n", n_pages);
 		alloc_page(NULL, PAGE_UP(prog_brk), n_pages,
 			   PTE_U | PTE_R | PTE_W, USR);
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("ebi_brk cp 3\n");
-#endif
+		em_debug("ebi_brk cp 3\n");
 	}
 	prog_brk = addr;
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("####### brk end########\n");
-#endif
+	em_debug("####### brk end########\n");
 	flush_tlb();
 	return addr;
 }
@@ -96,7 +86,7 @@ int ebi_gettimeofday(struct timeval *tv, struct timezone *tz)
 	// tv->tv_sec = time / 1000000000;
 	// tv->tv_usec = (time % 1000000000) / 1000; //  microsecond (μs)
 
-	// printd("***** gettimeofday: second: %ld, microsecond: %ld *****\n", tv->tv_sec, tv->tv_usec);
+	// em_debug("***** gettimeofday: second: %ld, microsecond: %ld *****\n", tv->tv_sec, tv->tv_usec);
 
 	return 0;
 }

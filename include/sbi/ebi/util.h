@@ -1,12 +1,13 @@
 #ifndef EBI_UTIL_H
 #define EBI_UTIL_H
 
+#define PMP_REGION_MAX 4
+
+#ifndef __ASSEMBLER__
 #include <stdint.h>
 #include <stddef.h>
-#include <sbi/sbi_trap.h>
 #include <sbi/sbi_console.h>
-
-#define PMP_REGION_MAX 4
+#include <sbi/sbi_trap.h>
 
 #define EBI_DEBUG
 
@@ -18,6 +19,38 @@
 #define sbi_error(fmt, ...)                                         \
 	sbi_printf("\033[1;41m[%s ERROR] " fmt "\033[0m", __func__, \
 		   ##__VA_ARGS__)
+
+typedef struct {
+	uintptr_t reg_pa_start;
+	uintptr_t reg_va_start;
+	uintptr_t reg_size;
+	int holder;
+} peri_addr_t;
+
+typedef struct {
+	uintptr_t pmp_start;
+	uintptr_t pmp_size;
+	uintptr_t used;
+} pmp_region;
+
+typedef enum {
+	EBI_START = 398,
+	EBI_CREATE,
+	EBI_ENTER,
+	EBI_EXIT,
+	EBI_GOTO,
+	EBI_FETCH,
+	EBI_RELEASE,
+	EBI_MEM_ALLOC,
+	EBI_PUTS,
+	EBI_GETS,
+	EBI_PERI_INFORM,
+	EBI_MAP_REGISTER,
+	EBI_FLUSH_DCACHE,
+	EBI_DISCARD_DCACHE
+} ebi_funcid_t;
+
+#endif // __ASSEMBLER__
 
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
@@ -94,32 +127,5 @@
 #define EBI_ERROR -1
 
 #define MASK(n) ((1 << (n)) - 1)
-
-typedef struct {
-	uintptr_t reg_pa_start;
-	uintptr_t reg_va_start;
-	uintptr_t reg_size;
-	int holder;
-} peri_addr_t;
-
-typedef struct {
-	uintptr_t pmp_start;
-	uintptr_t pmp_size;
-	uintptr_t used;
-} pmp_region;
-
-typedef enum {
-	EBI_START = 398,
-	EBI_CREATE,
-	EBI_ENTER,
-	EBI_EXIT,
-	EBI_GOTO,
-	EBI_FETCH,
-	EBI_RELEASE,
-	EBI_PUTS,
-	EBI_GETS,
-	EBI_FLUSH_DCACHE,
-	EBI_DISCARD_DCACHE
-} ebi_funcid_t;
 
 #endif // EBI_UTIL_H

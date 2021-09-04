@@ -25,6 +25,11 @@ static const uint8_t S[256] = {
 	0x9F, 0x11, 0x83, 0x14,
 };
 
+#define CLEAR_64BITS(p) *((uint64_t *)(p)) = 0x0
+#define CLEAR_BLOCK(p)             \
+	CLEAR_64BITS((void *)(p)); \
+	CLEAR_64BITS((void *)(p) + 8)
+
 #define COPY_AS_TYPE(dst, src, type) *((type *)(dst)) = *((type *)(src))
 
 static void md2_memcpy(void *dst, const void *src, size_t len)

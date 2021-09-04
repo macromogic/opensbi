@@ -47,12 +47,12 @@
 #include <sys/time.h>
 #include "enclave.h"
 
-#define EFAULT              -1
-#define ERR_DRV_NOT_FND     -111
+#define EFAULT -1
+#define ERR_DRV_NOT_FND -111
 
 int ebi_fstat(uintptr_t fd, uintptr_t sstat);
 int ebi_brk(uintptr_t addr);
 int ebi_write(uintptr_t fd, uintptr_t content);
 int ebi_close(uintptr_t fd);
 int ebi_gettimeofday(struct timeval *tv, struct timezone *tz);
-#endif
+#endif // __ASSEMBLER__

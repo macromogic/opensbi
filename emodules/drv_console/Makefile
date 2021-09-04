@@ -1,7 +1,7 @@
 CC = riscv64-unknown-linux-gnu-gcc 
 OBJCOPY = riscv64-unknown-linux-gnu-objcopy
 
-CFLAGS = -nostdlib -static -mcmodel=medany -g -O0 -I../util
+CFLAGS = -nostdlib -static -mcmodel=medany -g -O0 -I../util -I../../include
 
 link_script = drv_console.lds
 headers = drv_console.h 

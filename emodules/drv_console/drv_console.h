@@ -4,6 +4,7 @@
 #define _DRV_ENCLAVE_CONSOLE_H
 
 #include <stdint.h>
+#include <sbi/ebi/drv.h>
 #include "../util/drv_ctrl.h"
 
 #define CONSOLE_CMD_INIT 0

@@ -4,10 +4,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#define bool char
-#define false 0
-#define true 1
-
 int vsnprintf(char *out, size_t n, const char *s, va_list vl)
 {
 	bool format  = false;
@@ -139,11 +135,10 @@ void *my_memset(void *s, int c, unsigned int len)
 	return s;
 }
 
+#ifdef EMODULES_DEBUG
 void print_color(const char *s)
 {
-#ifdef EMODULE_GLOBAL_DEBUG
 	printd("\033[0;32m%s\033[0m\n", s);
-#endif
 }
 
 // void show_reg(uintptr_t *regs)
@@ -169,6 +164,7 @@ void show_reg()
 
 	printd("************** END SHOW REG **************\n");
 }
+#endif
 
 #define L1_CACHE_BYTES 64
 void flush_dcache_range(unsigned long start, unsigned long end)

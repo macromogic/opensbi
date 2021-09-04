@@ -1,6 +1,7 @@
 #ifndef __ASSEMBLER__
 #include "drv_mem.h"
 #endif
+#include <sbi/ebi/memory.h>
 #include "drv_base.h"
 #include "drv_elf.h"
 #include "drv_list.h"
@@ -23,9 +24,7 @@ static inline void page_map_register()
 
 void loop_test()
 {
-#ifdef EMODULE_GLOBAL_DEBUG
 	print_color("---------------------- start");
-#endif
 	uintptr_t cycle1, cycle2;
 	for (int i = 0; i < 10; i++) {
 		int j;
@@ -34,13 +33,9 @@ void loop_test()
 			asm volatile("addi t4, t4, 1");
 		}
 		cycle2 = read_csr(cycle);
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("[loop test] cycle diff = %ld\n", cycle2 - cycle1);
-#endif
+		em_debug("cycle diff = %ld\n", cycle2 - cycle1);
 	}
-#ifdef EMODULE_GLOBAL_DEBUG
 	print_color("---------------------- end");
-#endif
 }
 
 /* Initialize memory for driver, including stack, heap, page table */
@@ -60,21 +55,17 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	uint8_t md2hash[MD2_BLOCK_SIZE];
 	md2((void *)mem_start, usr_size, md2hash);
 	end_cycle = read_csr(cycle);
-	printd("[md2]%lu ", end_cycle - begin_cycle);
+	em_debug("MD2: %lu \n", end_cycle - begin_cycle);
 
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] _ = %d\n", _);
-	printd("[S mode init_mem] id = %d\n", id);
-	printd("[S mode init_mem] mem_start = 0x%lx\n", mem_start);
-	printd("[S mode init_mem] VA_PA_OFFSET = 0x%lx\n", ENC_VA_PA_OFFSET);
-	printd("[S mode init_mem] va_top at 0x%lx\n", va_top);
-#endif
+	em_debug("_ = %d\n", _);
+	em_debug("id = %d\n", id);
+	em_debug("mem_start = 0x%lx\n", mem_start);
+	em_debug("VA_PA_OFFSET = 0x%lx\n", ENC_VA_PA_OFFSET);
+	em_debug("va_top at 0x%lx\n", va_top);
 	enclave_id = id;
 
-#ifdef EMODULE_GLOBAL_DEBUG
 	uintptr_t stvec = read_csr(stvec);
-	printd("[S mode init_mem] stvec set to 0x%lx\n", stvec);
-#endif
+	em_debug("stvec set to 0x%lx\n", stvec);
 
 	/* Give all spare memory to stack allocator, one for drivers, one for user
    * payload */
@@ -83,36 +74,27 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	uintptr_t base_end   = (uintptr_t)&_end;
 	uintptr_t base_size  = base_end - base_start;
 
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] Enclave base_start: 0x%llx\n", &_start);
-	printd("[S mode init_mem] base_end: 0x%llx\n", &_end);
-	printd("[S mode init_mem] base_size: 0x%x\n", base_size);
-#endif
+	em_debug("Enclave base_start: 0x%llx\n", &_start);
+	em_debug("base_end: 0x%llx\n", &_end);
+	em_debug("base_size: 0x%x\n", base_size);
 
 	// extern char _drv_console_start;
 	// printd("Driver console PA: 0x%08x\n", drv_console_start);
 
 	int cnt = 0;
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] drv_list[0].drv_start = 0x%x\n",
-	       drv_list[0].drv_start);
-#endif
+	em_debug("drv_list[0].drv_start = 0x%x\n", drv_list[0].drv_start);
 	while (drv_list[cnt].drv_start) {
 		drv_list[cnt].drv_start += ENC_VA_PA_OFFSET;
 		drv_list[cnt].drv_end += ENC_VA_PA_OFFSET;
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("[S mode init_mem] drv_list[%d].drv_start: 0x%x, drv_end: 0x%x\n",
-		       cnt, drv_list[cnt].drv_start, drv_list[cnt].drv_end);
-#endif
+		em_debug("drv_list[%d].drv_start: 0x%x, drv_end: 0x%x\n", cnt,
+			 drv_list[cnt].drv_start, drv_list[cnt].drv_end);
 		cnt++;
 	}
 
 	drv_addr_list = (drv_addr_t *)((uintptr_t)drv_list);
 	drv_addr_list = (void *)(ENC_VA_PA_OFFSET + (void *)drv_addr_list);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("\033[1;33m[S mode init_mem] drv_addr_list=%p at %p, drv_list=%p\n\033[0m",
-	       drv_addr_list, &drv_addr_list, drv_list);
-#endif
+	em_debug("\033[1;33mdrv_addr_list=%p at %p, drv_list=%p\n\033[0m",
+		 drv_addr_list, &drv_addr_list, drv_list);
 
 	/* currently we assume that the page table is followed by trie*/
 	uintptr_t page_table_start =
@@ -130,17 +112,13 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	uintptr_t base_avail_end   = mem_start + EDRV_MEM_SIZE + EUSR_MEM_SIZE;
 	uintptr_t base_avail_size =
 		PAGE_DOWN(base_avail_end - base_avail_start);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] base_avail_start = 0x%x, base_avail_end = 0x%x\n",
-	       base_avail_start, base_avail_end);
-	printd("[S mode init_mem] base_avail_size = %x\n", base_avail_size);
-#endif
+	em_debug("base_avail_start = 0x%x, base_avail_end = 0x%x\n",
+		 base_avail_start, base_avail_end);
+	em_debug("base_avail_size = %x\n", base_avail_size);
 
 	spa_init(base_avail_start, base_avail_size, DRV);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] hello1\n");
-	printd("[S mode init_mem] %x\n", base_avail_start);
-#endif
+	em_debug("hello1\n");
+	em_debug("%x\n", base_avail_start);
 
 	// printd("initializing driver spa: 0x%x, size: 0x%x\n", base_avail_start,
 	// base_avail_size); printd("driver spa initialize done\n");
@@ -149,23 +127,16 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	uintptr_t usr_avail_start = PAGE_UP(mem_start + usr_size);
 	uintptr_t usr_avail_size  = EUSR_MEM_SIZE - usr_size;
 	spa_init(usr_avail_start, PAGE_DOWN(usr_avail_size), USR);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] initializing user spa: 0x%x, size: 0x%x\n",
-	       usr_avail_start, usr_avail_size);
-	printd("[S mode init_mem] user spa initialize done\n");
-#endif
+	em_debug("Initializing user spa: 0x%x, size: 0x%x\n", usr_avail_start,
+		 usr_avail_size);
+	em_debug("User spa initialize done\n");
 
 	all_zero();
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("\033[1;33m[S mode init_mem] root: 0x%x\n\033[0m",
-	       get_page_table_root());
-#endif
+	em_debug("\033[1;33mroot: 0x%x\n\033[0m", get_page_table_root());
 	/* Load ELF running inside enclave */
 	uintptr_t usr_pc = elf_load(0, mem_start, USR, &prog_brk);
 
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] drv_list = 0x%lx\n", drv_list);
-#endif
+	em_debug("drv_list = 0x%lx\n", drv_list);
 	if (drv_list) {
 		// if (drv_list != 0 && drv_list[cnt].drv_start != 0) {
 		uintptr_t drv_pa_start =
@@ -173,41 +144,29 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 		uintptr_t drv_pa_end = PAGE_UP(((uintptr_t)drv_list) +
 					       64 * sizeof(drv_addr_t));
 		size_t n_drv_pages   = (drv_pa_end - drv_pa_start) >> 12;
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("[S mode init_mem] drv_pa_end = 0x%x drv_pa_start = 0x%x\n",
-		       drv_pa_end, drv_pa_start);
-		printd("[S mode init_mem] n_drv_pages = %d\n", n_drv_pages);
-#endif
+		em_debug("drv_pa_end = 0x%x drv_pa_start = 0x%x\n", drv_pa_end,
+			 drv_pa_start);
+		em_debug("n_drv_pages = %d\n", n_drv_pages);
 		map_page(NULL, PAGE_DOWN(drv_list[0].drv_start), drv_pa_start,
 			 n_drv_pages, PTE_V | PTE_R | PTE_X | PTE_W);
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("\033[1;33m[S mode init_mem] drv: 0x%x - 0x%x -> 0x%x\n\033[0m",
-		       drv_pa_start, drv_pa_end, __pa(drv_pa_start));
-#endif
+		em_debug("\033[1;33mdrv: 0x%x - 0x%x -> 0x%x\n\033[0m",
+			 drv_pa_start, drv_pa_end, __pa(drv_pa_start));
 	}
 	/* base driver remaining mem */
 	/* thus easier manupilating satp */
 	map_page(NULL, ENC_VA_PA_OFFSET + usr_avail_start, usr_avail_start,
 		 PAGE_DOWN(usr_avail_size) >> EPAGE_SHIFT,
 		 PTE_V | PTE_W | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] usr.remain: 0x%x - 0x%x -> 0x%x\n",
-	       usr_avail_start, usr_avail_start + PAGE_DOWN(usr_avail_size),
-	       __pa(usr_avail_start));
-#endif
+	em_debug("usr.remain: 0x%x - 0x%x -> 0x%x\n", usr_avail_start,
+		 usr_avail_start + PAGE_DOWN(usr_avail_size),
+		 __pa(usr_avail_start));
 	/* user stack R/W */
 	size_t n_user_stack_pages =
 		(PAGE_UP(EUSR_STACK_SIZE) >> EPAGE_SHIFT) + 1;
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] user stack needs %d pages\n",
-	       n_user_stack_pages);
-#endif
+	em_debug("User stack needs %d pages\n", n_user_stack_pages);
 	uintptr_t usr_stack_start = EUSR_STACK_START;
 	uintptr_t usr_stack_end	  = EUSR_STACK_END;
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] user stack: 0x%lx - 0x%lx\n", usr_stack_start,
-	       usr_stack_end);
-#endif
+	em_debug("User stack: 0x%lx - 0x%lx\n", usr_stack_start, usr_stack_end);
 	alloc_page(NULL, usr_stack_start, n_user_stack_pages,
 		   PTE_V | PTE_W | PTE_R | PTE_U, USR);
 	uintptr_t usr_sp = usr_stack_end;
@@ -221,19 +180,15 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	size_t n_base_text_pages = (PAGE_UP(text_size)) >> EPAGE_SHIFT;
 	map_page(NULL, ENC_VA_PA_OFFSET + text_start, text_start,
 		 n_base_text_pages, PTE_V | PTE_X | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] .text: 0x%x - 0x%x -> 0x%x\n", text_start,
-	       text_end, __pa(text_start));
-#endif
+	em_debug(".text: 0x%x - 0x%x -> 0x%x\n", text_start, text_end,
+		 __pa(text_start));
 
 	/* page_table */
 	map_page(NULL, ENC_VA_PA_OFFSET + page_table_start, page_table_start,
 		 (page_table_size + trie_size) >> EPAGE_SHIFT,
 		 PTE_V | PTE_W | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] page_table and trie: 0x%x - 0x%x -> 0x%x\n",
-	       page_table_start, trie_end, __pa(page_table_start));
-#endif
+	em_debug("page_table and trie: 0x%x - 0x%x -> 0x%x\n", page_table_start,
+		 trie_end, __pa(page_table_start));
 
 	/* base driver .rodata section */
 	extern char _rodata_start, _rodata_end;
@@ -243,10 +198,8 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	size_t n_base_rodata_pages = (PAGE_UP(rodata_size)) >> EPAGE_SHIFT;
 	map_page(NULL, ENC_VA_PA_OFFSET + rodata_start, rodata_start,
 		 n_base_rodata_pages, PTE_V | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] .rodata: 0x%x - 0x%x -> 0x%x\n", rodata_start,
-	       rodata_end, __pa(rodata_start));
-#endif
+	em_debug(".rodata: 0x%x - 0x%x -> 0x%x\n", rodata_start, rodata_end,
+		 __pa(rodata_start));
 
 	/* base driver .bss section */
 	extern char _bss_start, _bss_end;
@@ -256,10 +209,8 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	size_t n_base_bss_pages = (PAGE_UP(bss_size)) >> EPAGE_SHIFT;
 	map_page(NULL, ENC_VA_PA_OFFSET + bss_start, bss_start,
 		 n_base_bss_pages, PTE_V | PTE_W | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] .bss: 0x%x - 0x%x -> 0x%x\n", bss_start,
-	       bss_end, __pa(bss_start));
-#endif
+	em_debug(".bss: 0x%x - 0x%x -> 0x%x\n", bss_start, bss_end,
+		 __pa(bss_start));
 
 	/* base driver .init.data section */
 	extern char _init_data_start, _init_data_end;
@@ -270,10 +221,8 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 		(PAGE_UP(init_data_size)) >> EPAGE_SHIFT;
 	map_page(NULL, ENC_VA_PA_OFFSET + init_data_start, init_data_start,
 		 n_base_init_data_pages, PTE_V | PTE_W | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] .init.data: 0x%x - 0x%x -> 0x%x\n",
-	       init_data_start, init_data_end, __pa(init_data_start));
-#endif
+	em_debug(".init.data: 0x%x - 0x%x -> 0x%x\n", init_data_start,
+		 init_data_end, __pa(init_data_start));
 
 	/* base driver .data section */
 	extern char _data_start, _data_end;
@@ -283,43 +232,33 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	size_t n_base_data_pages = (PAGE_UP(data_size)) >> EPAGE_SHIFT;
 	map_page(NULL, ENC_VA_PA_OFFSET + data_start, data_start,
 		 n_base_data_pages, PTE_V | PTE_W | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] .data: 0x%x - 0x%x -> 0x%x\n", data_start,
-	       data_end, __pa(data_start));
+	em_debug(".data: 0x%x - 0x%x -> 0x%x\n", data_start, data_end,
+		 __pa(data_start));
 
 	volatile uintptr_t a7;
 	asm volatile("mv %0, a7" ::"r"(a7));
-	printd("[S mode init_mem] a7 = 0x%lx\n", a7);
-#endif
+	em_debug("a7 = 0x%lx\n", a7);
 
 	/* base driver remaining mem */
 	/* thus easier manupilating satp */
 	map_page(NULL, ENC_VA_PA_OFFSET + base_avail_start, base_avail_start,
 		 PAGE_DOWN(base_avail_size) >> EPAGE_SHIFT,
 		 PTE_V | PTE_W | PTE_R);
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] drv.remain: 0x%x - 0x%x -> 0x%x\n",
-	       base_avail_start, base_avail_start + PAGE_DOWN(base_avail_size),
-	       __pa(base_avail_start));
-#endif
+	em_debug("drv.remain: 0x%x - 0x%x -> 0x%x\n", base_avail_start,
+		 base_avail_start + PAGE_DOWN(base_avail_size),
+		 __pa(base_avail_start));
 
 	/* base stack R/W */
 	size_t n_base_stack_pages = (PAGE_UP(EDRV_STACK_SIZE)) >> EPAGE_SHIFT;
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] drv stack uses %d pages\n",
-	       n_base_stack_pages);
-#endif
+	em_debug("drv stack uses %d pages\n", n_base_stack_pages);
 	uintptr_t drv_sp = EDRV_STACK_TOP - EDRV_STACK_SIZE;
 	alloc_page(NULL, drv_sp, n_base_stack_pages, PTE_V | PTE_W | PTE_R,
 		   DRV);
 	drv_sp += EDRV_STACK_SIZE;
 
-#ifdef EMODULE_GLOBAL_DEBUG
-	printd("[S mode init_mem] sp: 0x%lx\n"
-	       "page table root: 0x%lx\n",
-	       drv_sp, get_page_table_root());
-	printd("[S mode init_mem] usr sp: 0x%llx\n", usr_sp);
-#endif
+	em_debug("sp: 0x%lx\nPage table root: 0x%lx\n", drv_sp,
+		 get_page_table_root());
+	em_debug("usr sp: 0x%llx\n", usr_sp);
 	uintptr_t satp = get_page_table_root() >> EPAGE_SHIFT;
 	satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
 
