@@ -26,6 +26,7 @@ typedef struct {
 	uintptr_t ns_stvec;
 	uintptr_t ns_sscratch;
 	uintptr_t ns_sie;
+	uintptr_t ns_sepc;
 
 	uintptr_t pa;
 	uintptr_t mem_size;

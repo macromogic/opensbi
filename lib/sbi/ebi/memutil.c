@@ -285,9 +285,7 @@ void update_section_info(uintptr_t sfn, int owner, uintptr_t va)
 
 void free_section(uintptr_t sfn)
 {
-	spin_lock(&memory_pool_lock);
 	section_t *sec = sfn_to_section(sfn);
-	spin_unlock(&memory_pool_lock);
 
 	if (sec->owner < 0)
 		return;

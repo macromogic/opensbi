@@ -28,6 +28,38 @@ static inline void dump_csr_context(const enclave_context_t *ectx)
 }
 #pragma GCC diagnostic pop
 
+#ifdef EBI_DEBUG
+uintptr_t get_pa(pte_t *root, uintptr_t va)
+{
+	uintptr_t l[] = { (va & MASK_L2) >> 30, (va & MASK_L1) >> 21,
+			  (va & MASK_L0) >> 12 };
+	pte_t tmp_entry;
+	uintptr_t tmp;
+	int i = 0;
+	while (1) {
+		tmp_entry = root[l[i]];
+		if (!tmp_entry.pte_v) {
+			sbi_error("Invalid\n");
+			return 0;
+		}
+		if ((tmp_entry.pte_r | tmp_entry.pte_w | tmp_entry.pte_x)) {
+			break;
+		}
+		tmp  = tmp_entry.ppn << 12;
+		root = (pte_t *)(tmp);
+		i++;
+	}
+	if (i == 2)
+		return (tmp_entry.ppn << 12) | (va & 0xfff);
+	else if (i == 1)
+		return (tmp_entry.ppn >> 9) << 21 | (va & 0x1fffff);
+	else {
+		return 0;
+	}
+}
+
+#endif
+
 static void init_enclave_context(enclave_context_t *ectx)
 {
 	uintptr_t new_mstatus = csr_read(CSR_MSTATUS) &
@@ -41,6 +73,7 @@ static void init_enclave_context(enclave_context_t *ectx)
 	ectx->ns_satp	       = 0;
 	ectx->ns_sie	       = 0;
 	ectx->ns_stvec	       = 0;
+	ectx->ns_sepc	       = 0;
 	ectx->pt_root_addr     = 0;
 	ectx->inverse_map_addr = 0;
 	ectx->offset_addr      = 0;
@@ -57,6 +90,7 @@ static void save_enclave_context(enclave_context_t *ectx, uintptr_t mepc,
 	ectx->ns_stvec	  = csr_read(CSR_STVEC);
 	ectx->ns_sstatus  = csr_read(CSR_SSTATUS);
 	ectx->ns_sscratch = csr_read(CSR_SSCRATCH);
+	ectx->ns_sepc	  = csr_read(CSR_SEPC);
 }
 
 static void restore_enclave_context(enclave_context_t *ectx,
@@ -70,6 +104,7 @@ static void restore_enclave_context(enclave_context_t *ectx,
 	csr_write(CSR_STVEC, ectx->ns_stvec);
 	csr_write(CSR_SSTATUS, ectx->ns_sstatus);
 	csr_write(CSR_SSCRATCH, ectx->ns_sscratch);
+	csr_write(CSR_SEPC, ectx->ns_sepc);
 
 	regs->mepc    = ectx->ns_mepc - 4;
 	regs->mstatus = ectx->ns_mstatus;
@@ -97,6 +132,7 @@ static void enclave_mem_free(enclave_context_t *ectx)
 
 	sbi_debug("Freeing enclave %d\n", eid);
 	free_section_for_enclave(eid);
+	sbi_debug("Freed enclave %d\n", eid);
 }
 
 void init_enclaves(void)
@@ -205,18 +241,32 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	uint32_t hart_id	= current_hartid();
 	if (ectx->status != ENC_LOAD || host->status != ENC_RUN) {
 		sbi_error("Invalid runtime state!\n");
+		sbi_error("ectx->status = %d, host->status = %d\n",
+			  ectx->status, host->status);
+		return EBI_ERROR;
 	}
 	sbi_debug("Entering enclave #0x%lx\n", id);
 
 	// Copy user parameters
 	memcpy_from_user(ectx->user_param, regs->a2, regs->a1, mepc);
+	sbi_debug("mepc=0x%lx\n", mepc);
 
 	// Configure PMP, save context
 	pmp_switch(ectx);
 	save_umode_context(host, regs);
-	save_enclave_context(ectx, mepc, regs);
+	save_enclave_context(host, mepc, regs);
 	restore_enclave_context(ectx, regs);
 	flush_tlb();
+
+	sbi_debug(">>> host ctx:\n");
+	dump_csr_context(host);
+	sbi_debug(">>> enclave ctx:\n");
+	dump_csr_context(ectx);
+	uintptr_t mepc_pa =
+		get_pa((pte_t *)((host->ns_satp & 0xFFFFFFFFFFF) << 12),
+		       host->ns_mepc);
+	sbi_debug("MEPC: va=%lx, pa=%lx\n", host->ns_mepc, mepc_pa);
+	debug_memdump(mepc_pa, 32);
 
 	// Assign the enclave to a core
 	spin_lock(&core_lock);
@@ -249,14 +299,17 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	uint32_t hart_id	= current_hartid();
 	enclave_context_t *ectx = &enclaves[id];
 	enclave_context_t *host = &enclaves[0];
-	if (ectx->status == ENC_RUN || host->status == ENC_IDLE) {
+	if (ectx->status != ENC_RUN || host->status != ENC_IDLE) {
 		sbi_error("Invalid runtime state!\n");
+		sbi_error("ectx->status = %d, host->status = %d\n",
+			  ectx->status, host->status);
 		return EBI_ERROR;
 	}
 	sbi_debug("Exiting encalve #0x%lx\n", id);
 
 	// Free encalve memory, clean registers
 	enclave_mem_free(ectx);
+	sbi_debug("Cleaning regs\n");
 	spin_lock(&core_lock);
 	enclave_on_core[hart_id] = 0;
 	spin_unlock(&core_lock);
@@ -264,12 +317,19 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	restore_umode_context(host, regs);
 	restore_enclave_context(host, regs);
 	regs->mepc += 4;
+	uintptr_t satp = csr_read(CSR_SATP);
+	uintptr_t mepc_pa =
+		get_pa((pte_t *)((satp & 0xFFFFFFFFFFF) << 12), host->ns_mepc);
+	sbi_debug("MEPC: va=%lx, pa=%lx\n", host->ns_mepc, mepc_pa);
+	debug_memdump(mepc_pa, 32);
+
+	dump_csr_context(host);
 
 	// Set return value, switch runtime status
 	regs->a0 = ret_val;
 	spin_lock(&enclave_lock);
 	ectx->status = ENC_FREE;
-	ectx->status = ENC_RUN;
+	host->status = ENC_RUN;
 	spin_unlock(&enclave_lock);
 	return EBI_OK;
 }
