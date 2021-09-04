@@ -11,6 +11,7 @@ spinlock_t memory_pool_lock;
 #pragma GCC diagnostic push
 static void dump_section_ownership()
 {
+	sbi_debug("Nothing\n");
 }
 #pragma GCC diagnostic pop
 
@@ -144,6 +145,7 @@ void free_section_for_enclave(int eid)
 	dump_section_ownership();
 
 	spin_lock(&memory_pool_lock);
+	sbi_debug("Got memory pool lock\n");
 	for_each_section_in_pool(memory_pool, sec, i)
 	{
 		if (sec->owner == eid) {
@@ -260,7 +262,9 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	}
 
 	// 5. Free the source sectino
+	spin_lock(&memory_pool_lock);
 	free_section(src_sfn);
+	spin_unlock(&memory_pool_lock);
 
 	// 6. Flush TLB and D-cache
 	flush_tlb();
@@ -299,5 +303,14 @@ void memcpy_from_user(uintptr_t maddr, uintptr_t uaddr, uintptr_t size,
 			++uaddr;
 			--size;
 		}
+	}
+}
+
+void debug_memdump(uintptr_t addr, size_t size)
+{
+	uint32_t *ptr = (uint32_t *)addr;
+	while (size--) {
+		sbi_debug("%16p : %8x\n", ptr, *ptr);
+		ptr++;
 	}
 }

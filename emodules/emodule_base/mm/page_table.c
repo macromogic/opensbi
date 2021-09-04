@@ -196,10 +196,10 @@ uintptr_t get_pa(uintptr_t va)
 	uintptr_t tmp;
 	int i = 0;
 	while (1) {
-#ifdef EMODULE_GLOBAL_DEBUG
-		printd("[S mode get_pa] i = %d, root = %p, OFFSET = 0x%lx\n", i,
-		       root, ENC_VA_PA_OFFSET);
-#endif
+		// #ifdef EMODULE_GLOBAL_DEBUG
+		// 		printd("[S mode get_pa] i = %d, root = %p, OFFSET = 0x%lx\n", i,
+		// 		       root, ENC_VA_PA_OFFSET);
+		// #endif
 		tmp_entry = root[l[i]];
 		if (!tmp_entry.pte_v) {
 			printd("ERROR: va:0x%lx is not valid!!!\n", va);

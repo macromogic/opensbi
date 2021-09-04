@@ -93,5 +93,6 @@ void free_section_for_enclave(int eid);
 int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn);
 void memcpy_from_user(uintptr_t maddr, uintptr_t uaddr, uintptr_t size,
 		      uintptr_t mepc);
+void debug_memdump(uintptr_t addr, size_t size);
 
 #endif // EBI_MEMORY_H

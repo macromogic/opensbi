@@ -15,8 +15,9 @@
 #else
 #define sbi_debug(fmt, ...)
 #endif
-#define sbi_error(fmt, ...) \
-	sbi_printf("[%s ERROR] " fmt, __func__, ##__VA_ARGS__)
+#define sbi_error(fmt, ...)                                         \
+	sbi_printf("\033[1;41m[%s ERROR] " fmt "\033[0m", __func__, \
+		   ##__VA_ARGS__)
 
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
