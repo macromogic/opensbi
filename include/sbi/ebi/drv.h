@@ -22,5 +22,6 @@ typedef struct {
 extern drv_addr_t drv_addr_list[MAX_DRV];
 uintptr_t drv_copy(uintptr_t *dst_addr, uintptr_t drv_mask);
 void inform_peripheral(struct sbi_trap_regs *regs);
-
+void drv_fetch(uintptr_t drv_to_fetch);
+void drv_release(uintptr_t drv_to_release);
 #endif // EBI_DRV_H

@@ -71,6 +71,18 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 		inform_peripheral(regs);
 		return ret;
 
+	case SBI_EXT_EBI_FETCH:
+		sbi_debug("SBI_EXT_EBI_FETCH\n");
+		uintptr_t drv_to_fetch = regs->a0;
+		drv_fetch(drv_to_fetch);
+		return ret;
+	
+	case SBI_EXT_EBI_RELEASE:
+		sbi_debug("SBI_EXT_EBI_RELEASE\n");
+		uintptr_t drv_to_release = regs->a1;
+		drv_release(drv_to_release);
+		return ret;
+
 	case SBI_EXT_EBI_MEM_ALLOC:
 		sbi_debug("SBI_EXT_EBI_MEM_ALLOC\n");
 		va = regs->a0;

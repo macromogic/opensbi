@@ -18,5 +18,7 @@ extern drv_addr_t* drv_addr_list;
 
 drv_ctrl_t* init_console_driver();
 drv_ctrl_t* init_rtc_driver();
+void drv_fetch(uintptr_t drv_to_fetch);
+void drv_release(uintptr_t drv_to_release);
 
 #endif
