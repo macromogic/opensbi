@@ -59,7 +59,6 @@ int fdt_serial_init(void)
 	struct fdt_serial *drv;
 	const struct fdt_match *match;
 	int pos, noff = -1, len, coff, rc;
-	int save_noff = -1, save_noff2 = -1;
 	void *fdt = sbi_scratch_thishart_arg1_ptr();
 
 	/* Find offset of node pointed by stdout-path */
@@ -77,9 +76,6 @@ int fdt_serial_init(void)
 		match = fdt_match_node(fdt, noff, drv->match_table);
 		if (!match)
 			continue;
-		if (pos == 1) {
-			save_noff = noff;
-		}
 
 		if (drv->init) {
 			rc = drv->init(fdt, noff, match);
@@ -102,9 +98,6 @@ int fdt_serial_init(void)
 		if (noff < 0)
 			continue;
 
-		if (pos == 1) {
-			save_noff2 = noff;
-		}
 		if (drv->init) {
 			rc = drv->init(fdt, noff, match);
 			if (rc)
@@ -115,11 +108,5 @@ int fdt_serial_init(void)
 	}
 
 done:
-	sbi_printf("[fdt_serial] fdt=%p, save_noff=%x, save_noff2=%x\n", fdt,
-		   save_noff, save_noff2);
-	struct platform_uart_data uart;
-	fdt_parse_sifive_uart_node(fdt, save_noff, &uart);
-	sbi_printf("[fdt_serial] addr=%lx, freq=%lu, baud=%lu\n", uart.addr,
-		   uart.freq, uart.baud);
 	return 0;
 }

@@ -10,6 +10,7 @@
 #include <sbi/riscv_io.h>
 #include <sbi/sbi_console.h>
 #include <sbi_utils/serial/sifive-uart.h>
+#include <sbi/ebi/util.h>
 
 /* clang-format off */
 
@@ -97,6 +98,11 @@ int sifive_uart_init(unsigned long base, u32 in_freq, u32 baudrate)
 	set_reg(UART_REG_TXCTRL, UART_TXCTRL_TXEN);
 	/* Enable Rx */
 	set_reg(UART_REG_RXCTRL, UART_RXCTRL_RXEN);
+
+	sbi_debug("Serial @0x%lx\n", base);
+	sbi_debug("txctrl=0x%08x\n", get_reg(UART_REG_TXCTRL));
+	sbi_debug("rxctrl=0x%08x\n", get_reg(UART_REG_RXCTRL));
+	sbi_debug("ie=0x%08x\n", get_reg(UART_REG_IE));
 
 	return 0;
 }

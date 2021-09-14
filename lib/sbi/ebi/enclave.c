@@ -258,14 +258,13 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	save_umode_context(host, regs);
 	save_enclave_context(host, mepc, regs);
 	restore_enclave_context(ectx, regs);
+	// FIXME Dirty: force write console regs
+	// writel(0x00010001, (void *)0x10010008);
+	// writel(0x00000002, (void *)0x10010010);
 	flush_tlb();
 
 	mtvec = csr_read(CSR_MTVEC);
 	sbi_debug("After: mtvec=%lx\n", mtvec);
-
-	// FIXME Dirty: force write console regs
-	writel(0x00010001, (void *)0x10010008);
-	writel(0x00000002, (void *)0x10010010);
 
 	sbi_debug(">>> host ctx:\n");
 	dump_csr_context(host);

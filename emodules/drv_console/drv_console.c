@@ -18,8 +18,9 @@
 #define UART_TXFIFO_FULL	0x80000000
 #define UART_RXFIFO_EMPTY	0x80000000
 #define UART_RXFIFO_DATA	0x000000ff
-#define UART_TXCTRL_TXEN	0x1
-#define UART_RXCTRL_RXEN	0x1
+#define UART_TXCTRL_TXEN	0x00010001
+#define UART_RXCTRL_RXEN	0x00000001
+#define UART_IE             0x00000002
 
 /* clang-format on */
 
@@ -95,7 +96,7 @@ int sifive_uart_init(unsigned long base, u32 in_freq, u32 baudrate)
 	if (in_freq)
 		set_reg(UART_REG_DIV, uart_min_clk_divisor(in_freq, baudrate));
 	/* Disable interrupts */
-	set_reg(UART_REG_IE, 0);
+	set_reg(UART_REG_IE, UART_IE);
 	/* Enable TX */
 	set_reg(UART_REG_TXCTRL, UART_TXCTRL_TXEN);
 	/* Enable Rx */
