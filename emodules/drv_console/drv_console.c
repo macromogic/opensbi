@@ -5,32 +5,15 @@
 // #include <assert.h>
 #include "drv_console.h"
 
-volatile uint8_t *uart16550;
-// some devices require a shifted register index
-// (e.g. 32 bit registers instead of 8 bit registers)
-
-#define UART_REG_QUEUE 0 // rx/tx fifo data
-#define UART_REG_DLL 0	 // divisor latch (LSB)
-#define UART_REG_IER 1	 // interrupt enable register
-#define UART_REG_DLM 1	 // divisor latch (MSB)
-#define UART_REG_FCR 2	 // fifo control register
-#define UART_REG_LCR 3	 // line control register
-#define UART_REG_MCR 4	 // modem control register
-#define UART_REG_LSR 5	 // line status register
-#define UART_REG_MSR 6	 // modem status register
-#define UART_REG_SCR 7	 // scratch register
-#define UART_REG_STATUS_RX 0x01
-#define UART_REG_STATUS_TX 0x20
-
 /* clang-format off */
 
-#define UART_REG_TXFIFO		0
-#define UART_REG_RXFIFO		1
-#define UART_REG_TXCTRL		2
-#define UART_REG_RXCTRL		3
-#define UART_REG_IE		4
-#define UART_REG_IP		5
-#define UART_REG_DIV		6
+#define UART_REG_TXFIFO		0 // 0x00 txdata
+#define UART_REG_RXFIFO		1 // 0x04 rxdata
+#define UART_REG_TXCTRL		2 // 0x08 txctrl
+#define UART_REG_RXCTRL		3 // 0x0C rxctrl
+#define UART_REG_IE		4 // 0x10 ie (interrupt enable)
+#define UART_REG_IP		5 // 0x14 ip (interrupt pending)
+#define UART_REG_DIV		6 // 0x18 div (baud rate divisor)
 
 #define UART_TXFIFO_FULL	0x80000000
 #define UART_RXFIFO_EMPTY	0x80000000

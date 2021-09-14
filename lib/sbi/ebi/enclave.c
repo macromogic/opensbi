@@ -5,6 +5,7 @@
 #include <sbi/riscv_asm.h>
 #include <sbi/riscv_encoding.h>
 #include <sbi/sbi_string.h>
+#include <sbi/riscv_io.h>
 
 enclave_context_t enclaves[NUM_ENCLAVE + 1];
 int enclave_on_core[NUM_CORES];
@@ -211,12 +212,10 @@ uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 		   base_size);
 
 	// Copy drivers
+	enclave_base_addr += base_size;
+	drv_size = 0;
 	if (drv_mask != 0) {
-		enclave_base_addr += base_size;
 		drv_size = drv_copy(&enclave_base_addr, drv_mask);
-	} else {
-		enclave_base_addr = 0;
-		drv_size	  = 0;
 	}
 	sbi_debug(
 		"After driver copy: enclave_base_addr=0x%lx, base_start_addr=0x%lx, pa=0x%lx\n",
@@ -263,6 +262,10 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 
 	mtvec = csr_read(CSR_MTVEC);
 	sbi_debug("After: mtvec=%lx\n", mtvec);
+
+	// FIXME Dirty: force write console regs
+	writel(0x00010001, (void *)0x10010008);
+	writel(0x00000002, (void *)0x10010010);
 
 	sbi_debug(">>> host ctx:\n");
 	dump_csr_context(host);
@@ -325,7 +328,6 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	pmp_switch(NULL);
 	restore_umode_context(host, regs);
 	restore_enclave_context(host, regs);
-	regs->mepc += 4;
 
 	mtvec = csr_read(CSR_MTVEC);
 	sbi_debug("After: mtvec=%lx\n", mtvec);

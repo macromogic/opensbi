@@ -13,36 +13,20 @@ drv_ctrl_t *init_console_driver()
 
 	em_debug("Start\n");
 
-	// extern char _drv_enclave_console_start, _drv_enclave_console_end;
-
-	// if(!drv_addr_list){
-	//     drv_addr_list = 0xc0708028;
-	//     printd("\033[0;32mHere, I found the address becoming 0 and change it to 0x%p\n\033[0m",drv_addr_list);
-	// }
-	// printd("\033[0;32m[init_console_driver] drv_addr_list: 0x%p\n\033[0m", drv_addr_list);
 	drv_console_start = drv_addr_list[DRV_CONSOLE].drv_start;
-	// drv_console_end = drv_addr_list[DRV_CONSOLE].drv_end;
-	// printd("[init_console_driver] drv_console_start: 0x%x drv_console_end: 0x%x\n", drv_console_start, drv_console_end);
+	console_handler	  = (cmd_handler)drv_console_start;
+	console_ctrl	  = (drv_ctrl_t *)console_handler(QUERY_INFO, 0, 0, 0);
 
-	// console_drv_size = drv_console_end - drv_console_start;
-	// n_console_drv_pages = (PAGE_UP(console_drv_size)) >> EPAGE_SHIFT;
-	// printd("[init_console_driver] drv_size: 0x%lx, n_console_drv_pages: 0x%lx at %p\n",console_drv_size, n_console_drv_pages, &n_console_drv_pages);
-
-	// map_page((pte *)pt_root, drv_console_start, drv_console_start - ENC_VA_PA_OFFSET, n_console_drv_pages, PTE_V | PTE_X | PTE_W | PTE_R);
-	// printd("[init_console_driver] after map_page\n");
-
-	console_handler = (cmd_handler)drv_console_start;
-
-	console_ctrl = (drv_ctrl_t *)console_handler(QUERY_INFO, 0, 0, 0);
-	// printd("reg_addr: %x, reg_size: %x\n", console_ctrl->reg_addr, console_ctrl->reg_size);
-
-	// console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
 	console_va = ioremap(NULL, console_ctrl->reg_addr, 1024);
-	SBI_CALL5(0x19260817, console_ctrl->reg_addr, console_va,
-		  PAGE_UP(console_ctrl->reg_size), 420);
-	// console_va = 0xd0000000;
-	// uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
-	// console_va = console_ctrl->reg_addr;
+	uintptr_t i;
+	uint32_t val;
+	em_debug(">>> BEFORE <<<\n");
+	for (i = 0; i < 0x1c; i += 4) {
+		val = readl((void *)(console_va + i));
+		em_debug("Reg @0x%x: %x\n", i, val);
+	}
+	SBI_CALL5(SBI_EXT_EBI, console_ctrl->reg_addr, console_va,
+		  PAGE_UP(console_ctrl->reg_size), EBI_PERI_INFORM);
 
 	em_debug("console_va: 0x%x\n, entry: 0x%lx\n", console_va,
 		 get_pa(console_va));
@@ -50,14 +34,19 @@ drv_ctrl_t *init_console_driver()
 	console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
 
 	em_debug("Console driver init successfully\n");
-	console_handler(CONSOLE_CMD_PUT, 'c', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'o', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'm', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'p', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 'a', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
-	console_handler(CONSOLE_CMD_PUT, '\n', 0, 0);
+	em_debug(">>> AFTER <<<\n");
+	for (i = 0; i < 0x1c; i += 4) {
+		val = readl((void *)(console_va + i));
+		em_debug("Reg @0x%x: %x\n", i, val);
+	}
+	// console_handler(CONSOLE_CMD_PUT, 'c', 0, 0
+	// console_handler(CONSOLE_CMD_PUT, 'o', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 'm', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 'p', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 'a', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, 's', 0, 0);
+	// console_handler(CONSOLE_CMD_PUT, '\n', 0, 0);
 
 	return console_ctrl;
 }

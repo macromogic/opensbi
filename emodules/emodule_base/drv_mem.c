@@ -131,7 +131,7 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 		 usr_avail_size);
 	em_debug("User spa initialize done\n");
 
-	all_zero();
+	// all_zero();
 	em_debug("\033[1;33mroot: 0x%x\n\033[0m", get_page_table_root());
 	/* Load ELF running inside enclave */
 	uintptr_t usr_pc = elf_load(0, mem_start, USR, &prog_brk);

@@ -173,7 +173,7 @@ void flush_dcache_range(unsigned long start, unsigned long end)
 	// for (; i < end; i += L1_CACHE_BYTES)
 	// 	asm volatile("cflush.d.l1"); /*dcache.cpa a0*/
 	// asm volatile(".long 0x01b0000b");    /*sync.is*/
-	SBI_CALL(EBI_FLUSH_DCACHE, 0, 0, 0);
+	SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_FLUSH_DCACHE);
 }
 
 void invalidate_dcache_range(unsigned long start, unsigned long end)
@@ -184,7 +184,7 @@ void invalidate_dcache_range(unsigned long start, unsigned long end)
 	// 	asm volatile("dcache.ipa a0");
 
 	// asm volatile(".long 0x01b0000b");
-	SBI_CALL(EBI_DISCARD_DCACHE, 0, 0, 0);
+	SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_DISCARD_DCACHE);
 }
 
 void flush_tlb_range(unsigned long start, unsigned long end)

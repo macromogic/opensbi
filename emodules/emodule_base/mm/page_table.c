@@ -314,7 +314,9 @@ void all_zero()
 		for (j = 0; j < 512; j++) {
 			tmp_pte = &page_table[i][j];
 			if (*((uintptr_t *)tmp_pte)) {
-				em_error("%d:%d not zero\n", i, j);
+				// em_error("%d:%d not zero! Setting zero...\n", i,
+				// 	 j);
+				tmp_pte = 0;
 			}
 		}
 	}
