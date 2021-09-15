@@ -7,6 +7,7 @@
 #include <sbi/sbi_console.h>
 #include <sbi/ebi/enclave.h>
 #include <sbi/ebi/memory.h>
+#include <sbi/ebi/debug.h>
 
 extern char _base_start, _base_end;
 extern char _enclave_start, _enclave_end;
@@ -120,6 +121,10 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 	case SBI_EXT_EBI_DISCARD_DCACHE:
 		asm volatile(".long 0xFC200073"); // cdiscard.d.l1 zero
 		// TODO Clean L2?
+		return ret;
+
+	case SBI_EXT_EBI_DEBUG:
+		enclave_debug(regs);
 		return ret;
 	}
 
