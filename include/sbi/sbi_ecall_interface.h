@@ -123,9 +123,13 @@
 #define SBI_EXT_EBI_GETS    411
 
 #define SBI_EXT_EBI_PERI_INFORM 420
+#define SBI_EXT_EBI_FETCH	421
+#define SBI_EXT_EBI_RELEASE	422
 
 #define SBI_EXT_EBI_FLUSH_DCACHE 430
 #define SBI_EXT_EBI_DISCARD_DCACHE 431
+
+#define SBI_EXT_EBI_DEBUG 499
 
 /* clang-format on */
 

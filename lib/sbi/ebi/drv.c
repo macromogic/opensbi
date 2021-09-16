@@ -2,10 +2,22 @@
 #include <sbi/ebi/enclave.h>
 #include <sbi/sbi_string.h>
 #include <sbi/riscv_asm.h>
+#include <sbi/riscv_locks.h>
 
 extern char _console_start, _console_end;
 drv_addr_t drv_addr_list[MAX_DRV] = { { (uintptr_t)&_console_start,
 					(uintptr_t)&_console_end, -1 } };
+spinlock_t drv_lock[MAX_DRV];
+
+void drv_fetch(uintptr_t drv_to_fetch)
+{
+	spin_lock(&drv_lock[drv_to_fetch]);
+}
+
+void drv_release(uintptr_t drv_to_release)
+{
+	spin_unlock(&drv_lock[drv_to_release]);
+}
 
 uintptr_t drv_copy(uintptr_t *dst_addr, uintptr_t drv_mask)
 {

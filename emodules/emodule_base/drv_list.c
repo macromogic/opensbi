@@ -3,6 +3,16 @@
 #include "mm/page_table.h"
 #include "../drv_console/drv_console.h"
 
+void drv_fetch(uintptr_t drv_to_fetch)
+{
+	SBI_CALL5(SBI_EXT_EBI, drv_to_fetch, 0, 0, EBI_FETCH);
+}
+
+void drv_release(uintptr_t drv_to_release)
+{
+	SBI_CALL5(SBI_EXT_EBI, drv_to_release, 0, 0, EBI_RELEASE);
+}
+
 drv_ctrl_t *init_console_driver()
 {
 	uintptr_t drv_console_start, drv_console_end, console_drv_size,
@@ -40,7 +50,7 @@ drv_ctrl_t *init_console_driver()
 
 	// console_va = ioremap((pte *)pt_root, console_ctrl->reg_addr, console_ctrl->reg_size);
 	console_va = ioremap(NULL, console_ctrl->reg_addr, 1024);
-	SBI_CALL5(0x19260817, console_ctrl->reg_addr, console_va,
+	SBI_CALL5(SBI_EXT_EBI, console_ctrl->reg_addr, console_va,
 		  PAGE_UP(console_ctrl->reg_size), 420);
 	// console_va = 0xd0000000;
 	// uintptr_t entry = (uintptr_t) *get_pte((pte*)pt_root,console_va,0);
