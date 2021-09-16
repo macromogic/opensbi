@@ -64,8 +64,8 @@ int uart16550_init(uintptr_t reg_addr)
     uart16550 = (void*)reg_addr;
     uart16550_reg_shift = 0;
     
-    uart16550[UART_REG_IER << uart16550_reg_shift] = 0x00;                // Disable all interrupts
-    uart16550[UART_REG_LCR << uart16550_reg_shift] = 0x03;                // Enable DLAB (set baud rate divisor)
+    uart16550[UART_REG_IER << uart16550_reg_shift] = 0x05;                // Disable all interrupts
+    uart16550[UART_REG_LCR << uart16550_reg_shift] = 0x13;                // Enable DLAB (set baud rate divisor)
     // uart16550[UART_REG_DLL << uart16550_reg_shift] = (uint8_t)divisor;    // Set divisor (lo byte)
     // uart16550[UART_REG_DLM << uart16550_reg_shift] = (uint8_t)(divisor >> 8);     //     (hi byte)
     // uart16550[UART_REG_LCR << uart16550_reg_shift] = 0x03;                // 8 bits, no parity, one stop bit
