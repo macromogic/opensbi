@@ -258,6 +258,7 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	restore_enclave_context(ectx, regs);
 	flush_tlb();
 
+#ifdef EBI_DEBUG
 	sbi_debug(">>> host ctx:\n");
 	dump_csr_context(host);
 	sbi_debug(">>> enclave ctx:\n");
@@ -267,6 +268,7 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 		       host->ns_mepc);
 	sbi_debug("MEPC: va=%lx, pa=%lx\n", host->ns_mepc, mepc_pa);
 	debug_memdump(mepc_pa, 32);
+#endif
 
 	// Assign the enclave to a core
 	spin_lock(&core_lock);
@@ -317,6 +319,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	restore_umode_context(host, regs);
 	restore_enclave_context(host, regs);
 	regs->mepc += 4;
+#ifdef EBI_DEBUG
 	uintptr_t satp = csr_read(CSR_SATP);
 	uintptr_t mepc_pa =
 		get_pa((pte_t *)((satp & 0xFFFFFFFFFFF) << 12), host->ns_mepc);
@@ -324,6 +327,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	debug_memdump(mepc_pa, 32);
 
 	dump_csr_context(host);
+#endif
 
 	// Set return value, switch runtime status
 	regs->a0 = ret_val;

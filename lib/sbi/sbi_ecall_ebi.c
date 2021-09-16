@@ -27,10 +27,10 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 	ulong mepc		= csr_read(CSR_MEPC);
 	int eid			= hartid_to_eid(core);
 	enclave_context_t *ectx = &enclaves[eid];
+	uintptr_t va, pa;
 
 #ifdef EBI_DEBUG
 	uintptr_t linux_satp = csr_read(CSR_SATP); //debug
-	uintptr_t va, pa;
 #endif
 
 	switch (funcid) {
@@ -86,6 +86,7 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 
 	case SBI_EXT_EBI_MEM_ALLOC:
 		sbi_debug("SBI_EXT_EBI_MEM_ALLOC\n");
+		;
 		va = regs->a0;
 		// pa should be passed to enclave by regs
 		pa = alloc_section_for_enclave(ectx, va);
