@@ -93,10 +93,6 @@ void handle_syscall(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 #endif
 		SBI_CALL5(SBI_EXT_EBI, enclave_id, arg_0, 0, EBI_EXIT);
 		break;
-	case EBI_GOTO:
-		//TODO SBI_CALL -> SBI_CALL5
-		SBI_CALL(EBI_GOTO, enclave_id, arg_0, 0);
-		break;
 	default:
 		printd("syscall %d unimplemented!\n", which);
 		SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
