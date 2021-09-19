@@ -1,14 +1,17 @@
 #include <sbi/ebi/drv.h>
 #include <sbi/ebi/enclave.h>
+#include <sbi/ebi/memory.h>
 #include <sbi/sbi_string.h>
 #include <sbi/riscv_asm.h>
 
 extern char _console_start, _console_end;
-drv_addr_t local_drv_addr_list[MAX_DRV] = { { (uintptr_t)&_console_start,
-					      (uintptr_t)&_console_end, -1 } };
-drv_addr_t *drv_addr_list = local_drv_addr_list; // Tricky! Do not change this!
+drv_addr_t __drv_addr_list[MAX_DRV] = { { .drv_start =
+						  (uintptr_t)&_console_start,
+					  .drv_end  = (uintptr_t)&_console_end,
+					  .using_by = -1 } };
+drv_addr_t *drv_addr_list = __drv_addr_list; // Tricky! Do not change this!
 
-uintptr_t drv_copy(uintptr_t *dst_addr, uintptr_t drv_mask)
+uintptr_t copy_drv_with_list(uintptr_t *dst_addr, uintptr_t drv_mask)
 {
 	// Default initialization implicitly calls `memset'
 	drv_addr_t local_addr_list[MAX_DRV];
@@ -27,6 +30,11 @@ uintptr_t drv_copy(uintptr_t *dst_addr, uintptr_t drv_mask)
 				   drv_size);
 			*dst_addr += drv_size;
 		}
+	}
+	if (i < MAX_DRV) {
+		local_addr_list[i].drv_start = 0; // Mark the end of the list
+		local_addr_list[i].drv_end   = 0;
+		local_addr_list[i].using_by  = 0;
 	}
 	sbi_memcpy((void *)*dst_addr, (void *)local_addr_list,
 		   sizeof(local_addr_list));

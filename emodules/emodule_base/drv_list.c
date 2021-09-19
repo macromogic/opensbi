@@ -13,11 +13,17 @@ drv_ctrl_t *init_console_driver()
 
 	em_debug("Start\n");
 
+	em_debug("driver list @0x%lx\n", drv_addr_list);
+	em_debug("console handler @0x%lx\n", &drv_addr_list[DRV_CONSOLE]);
+	em_debug("console handler @0x%lx\n",
+		 drv_addr_list[DRV_CONSOLE].drv_start);
 	drv_console_start = drv_addr_list[DRV_CONSOLE].drv_start;
 	console_handler	  = (cmd_handler)drv_console_start;
 	console_ctrl	  = (drv_ctrl_t *)console_handler(QUERY_INFO, 0, 0, 0);
 
+	em_debug("Before ioremap\n");
 	console_va = ioremap(NULL, console_ctrl->reg_addr, 1024);
+	em_debug("After ioremap\n");
 	uintptr_t i;
 	uint32_t val;
 	em_debug(">>> BEFORE <<<\n");

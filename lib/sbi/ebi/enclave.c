@@ -58,8 +58,7 @@ uintptr_t get_pa(pte_t *root, uintptr_t va)
 		return 0;
 	}
 }
-
-#endif
+#endif // EBI_DEBUG
 
 static void init_enclave_context(enclave_context_t *ectx)
 {
@@ -147,6 +146,28 @@ void init_enclaves(void)
 	sbi_debug("enclaves init successfully!");
 }
 
+/*
+ * Memory layout and enclave context (partial):
+ *
+ * ectx->user_param => ----------------- HIGH ADDR
+ *                     ^ < driver list >
+ *                     | `drv_size' == DRV_MAX * sizeof(drv_addr_t)
+ *                     v
+ * ectx->drv_list ===> -----------------
+ *                     ^ < drivers (optional) >
+ *                     |
+ *                     v
+ *                     -----------------
+ *                     ^ < base module >
+ *                     | PAGE_UP(&_base_end - &_base_start)
+ *                     v
+ * ectx->ns_mepc ====> -----------------
+ *                     ^ < user payload >
+ *                     | EUSR_MEM_SIZE
+ *                     v
+ * ectx->pa =========> -----------------  LOW ADDR
+ *
+ */
 uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 {
 	uintptr_t payload_addr	= regs->a0;
@@ -206,17 +227,14 @@ uintptr_t create_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	base_start_addr	  = (uintptr_t)&_base_start;
 	base_end_addr	  = (uintptr_t)&_base_end;
 	base_size	  = PAGE_UP(base_end_addr - base_start_addr);
-	enclave_base_addr = ectx->pa + EUSR_MEM_SIZE;
-	drv_size	  = 0;
+	enclave_base_addr = ectx->pa + EUSR_MEM_SIZE; // == ectx->ns_mepc
 	sbi_memcpy((void *)enclave_base_addr, (void *)base_start_addr,
 		   base_size);
 
 	// Copy drivers
+	// Actually drv_size is a constant value...
 	enclave_base_addr += base_size;
-	drv_size = 0;
-	if (drv_mask != 0) {
-		drv_size = drv_copy(&enclave_base_addr, drv_mask);
-	}
+	drv_size = copy_drv_with_list(&enclave_base_addr, drv_mask);
 	sbi_debug(
 		"After driver copy: enclave_base_addr=0x%lx, base_start_addr=0x%lx, pa=0x%lx\n",
 		enclave_base_addr, base_start_addr, ectx->pa);
@@ -246,7 +264,9 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	}
 	sbi_debug("Entering enclave #0x%lx\n", id);
 
+#ifdef EBI_DEBUG
 	uintptr_t mtvec = csr_read(CSR_MTVEC);
+#endif
 	sbi_debug("Before: mtvec=%lx\n", mtvec);
 
 	// Copy user parameters
@@ -258,23 +278,24 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	save_umode_context(host, regs);
 	save_enclave_context(host, mepc, regs);
 	restore_enclave_context(ectx, regs);
-	// FIXME Dirty: force write console regs
-	// writel(0x00010001, (void *)0x10010008);
-	// writel(0x00000002, (void *)0x10010010);
 	flush_tlb();
 
+#ifdef EBI_DEBUG
 	mtvec = csr_read(CSR_MTVEC);
+#endif
 	sbi_debug("After: mtvec=%lx\n", mtvec);
 
 	sbi_debug(">>> host ctx:\n");
 	dump_csr_context(host);
 	sbi_debug(">>> enclave ctx:\n");
 	dump_csr_context(ectx);
+#ifdef EBI_DEBUG
 	uintptr_t mepc_pa =
 		get_pa((pte_t *)((host->ns_satp & 0xFFFFFFFFFFF) << 12),
 		       host->ns_mepc);
 	sbi_debug("MEPC: va=%lx, pa=%lx\n", host->ns_mepc, mepc_pa);
 	debug_memdump(mepc_pa, 32);
+#endif
 
 	// Assign the enclave to a core
 	spin_lock(&core_lock);
@@ -315,7 +336,9 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	}
 	sbi_debug("Exiting encalve #0x%lx\n", id);
 
+#ifdef EBI_DEBUG
 	uintptr_t mtvec = csr_read(CSR_MTVEC);
+#endif
 	sbi_debug("Before: mtvec=%lx\n", mtvec);
 
 	// Free encalve memory, clean registers
@@ -328,6 +351,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	restore_umode_context(host, regs);
 	restore_enclave_context(host, regs);
 
+#ifdef EBI_DEBUG
 	mtvec = csr_read(CSR_MTVEC);
 	sbi_debug("After: mtvec=%lx\n", mtvec);
 	uintptr_t satp = csr_read(CSR_SATP);
@@ -335,6 +359,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 		get_pa((pte_t *)((satp & 0xFFFFFFFFFFF) << 12), host->ns_mepc);
 	sbi_debug("MEPC: va=%lx, pa=%lx\n", host->ns_mepc, mepc_pa);
 	debug_memdump(mepc_pa, 32);
+#endif
 
 	dump_csr_context(host);
 

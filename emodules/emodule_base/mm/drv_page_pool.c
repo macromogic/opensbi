@@ -6,11 +6,11 @@
 #include "../drv_util.h"
 /* SPA alway return ACCESSABLE address instead of raw physical address!!!! */
 
-struct pg_list page_pools[NUM_POOL];
-static uintptr_t alloc_mem_from_m(struct pg_list *pool);
+page_list_t page_pools[NUM_POOL];
+static uintptr_t alloc_mem_from_m(struct page_list *pool);
 
 // valid before mmu turned on
-static void dump_mem_pool(struct pg_list *pool)
+static void dump_mem_pool(struct page_list *pool)
 {
 	print_color("[S mode dump_mem_pool]start---------------------------");
 	printd("pool %p\n", pool);
@@ -28,7 +28,7 @@ static void dump_mem_pool(struct pg_list *pool)
 	print_color("[S mode dump_mem_pool]end-----------------------------");
 }
 
-uintptr_t va_pa_offset()
+uintptr_t get_va_pa_offset()
 {
 	uintptr_t satp = read_csr(satp);
 	/* if paging already enabled, add offset */
@@ -39,7 +39,7 @@ uintptr_t va_pa_offset()
 
 uintptr_t va_pa_offset_no_mmu()
 {
-	return ENC_VA_PA_OFFSET - va_pa_offset();
+	return ENC_VA_PA_OFFSET - get_va_pa_offset();
 }
 
 static uintptr_t get_phys_addr(uintptr_t va)
@@ -48,7 +48,7 @@ static uintptr_t get_phys_addr(uintptr_t va)
 }
 
 // this function will be used both before and after mmu gets turned on
-void __spa_put(uintptr_t pa, struct pg_list *pool)
+void __page_pool_put(uintptr_t pa, struct page_list *pool)
 {
 	uintptr_t prev;
 	uintptr_t section_offset = pa - SECTION_DOWN(pa);
@@ -71,7 +71,7 @@ void __spa_put(uintptr_t pa, struct pg_list *pool)
 
 // returns virtual addr of the page, -1 on failure
 // if Out Of Memory, try allocate a memory section from M mode
-uintptr_t __spa_get(struct pg_list *pool)
+uintptr_t __page_pool_get(struct page_list *pool)
 {
 	uintptr_t page, ret, next;
 	if (LIST_EMPTY(pool)) {
@@ -92,37 +92,37 @@ uintptr_t __spa_get(struct pg_list *pool)
 	return ret;
 }
 
-// should be invoked before mmu gets turned on (only once)
-void spa_init(uintptr_t base, size_t size, char id)
+// should be invoked before MMU is turned on (only once)
+void page_pool_init(uintptr_t base, size_t size, char id)
 {
 	em_debug("Initializing page pool %d\n", (int)id);
 
 	uintptr_t cur;
-	struct pg_list *pool = page_pools + id;
+	page_list_t *pool = page_pools + id;
 	LIST_INIT(pool);
 	for (cur = base; cur < base + size; cur += EPAGE_SIZE) {
-		__spa_put(cur, pool);
+		__page_pool_put(cur, pool);
 	}
 
 	dump_mem_pool(pool);
 }
 
-void spa_put(uintptr_t addr, char id)
+void page_pool_put(uintptr_t addr, char id)
 {
-	__spa_put(addr, page_pools + id);
+	__page_pool_put(addr, page_pools + id);
 }
 
-uintptr_t spa_get_pa(char id)
+uintptr_t page_pool_get_pa(char id)
 {
-	uintptr_t page = __spa_get(page_pools + id);
+	uintptr_t page = __page_pool_get(page_pools + id);
 	if (page == -1)
 		return -1;
 	return get_phys_addr(page);
 }
 
-uintptr_t spa_get_pa_zero(char id)
+uintptr_t page_pool_get_pa_zero(char id)
 {
-	uintptr_t page = __spa_get(page_pools + id);
+	uintptr_t page = __page_pool_get(page_pools + id);
 	uintptr_t ret, acce = page - va_pa_offset_no_mmu();
 	if (page == -1)
 		return -1;
@@ -131,14 +131,14 @@ uintptr_t spa_get_pa_zero(char id)
 	return ret;
 }
 
-uintptr_t spa_avail(char id)
+uintptr_t page_pool_avail(char id)
 {
 	return (page_pools + id)->count;
 }
 
 // alloc memory from memory manager
 // return the start physical address on success; 0 on failure
-static uintptr_t alloc_mem_from_m(struct pg_list *pool)
+static uintptr_t alloc_mem_from_m(struct page_list *pool)
 {
 	uintptr_t addr, size;
 	unsigned int pool_size;
@@ -153,17 +153,16 @@ static uintptr_t alloc_mem_from_m(struct pg_list *pool)
 		return 0;
 	}
 
-	// linearly map the allocated memory by va_pa_offset
+	// linearly map the allocated memory by VA/PA offset
 	em_debug("va_top = 0x%lx\n", va_top);
-	map_page(NULL, va_top, addr, size >> EPAGE_SHIFT,
-		 PTE_V | PTE_W | PTE_R);
+	map_page(va_top, addr, size >> EPAGE_SHIFT, PTE_V | PTE_W | PTE_R);
 
 	// test
 	// SBI_CALL5(0xdeadbeef, addr, 0, 0, 0);
 
 	// put the allocated memory into mem pool
 	for (uintptr_t page = addr; page < addr + size; page += EPAGE_SIZE) {
-		__spa_put(page, pool);
+		__page_pool_put(page, pool);
 	}
 
 	if (LIST_EMPTY(pool))
