@@ -6,11 +6,8 @@
 
 #define PAGE_SIZE 4096
 
-// static page_directory page_directory_pool[PAGE_DIR_POOL];
 static uintptr_t page_directory_pool; // always store pa in
-// static uintptr_t address_trie; // always store pa
 
-uintptr_t ENC_PA_START;
 uintptr_t ENC_VA_PA_OFFSET;
 inverse_map_t inv_map[INVERSE_MAP_ENTRY_NUM];
 
@@ -20,7 +17,6 @@ inverse_map_t inv_map[INVERSE_MAP_ENTRY_NUM];
 // accessible addr to pa
 static inline uintptr_t acce_to_phys(uintptr_t acce_addr)
 {
-	// return read_csr(satp) ? get_pa(acce_addr) : acce_addr;
 	return read_csr(satp) ? (acce_addr - ENC_VA_PA_OFFSET) : acce_addr;
 }
 
@@ -106,7 +102,7 @@ void set_page_table_root(
 
 inline uintptr_t get_page_table_root() // returns accessible addr
 {
-	return page_directory_pool + va_pa_offset();
+	return page_directory_pool + get_va_pa_offset();
 }
 
 // returns accessible value; trie is always right behind the page table
@@ -154,7 +150,7 @@ void print_pte(uintptr_t va)
 			break;
 		}
 		tmp  = tmp_entry.ppn << 12;
-		root = (pte_t *)(tmp + va_pa_offset());
+		root = (pte_t *)(tmp + get_va_pa_offset());
 		i++;
 	}
 	em_debug("##########PRINT PTE @ %x############\n", va);
@@ -194,7 +190,7 @@ uintptr_t get_pa(uintptr_t va)
 			break;
 		}
 		tmp  = tmp_entry.ppn << 12;
-		root = (pte_t *)(tmp + va_pa_offset());
+		root = (pte_t *)(tmp + get_va_pa_offset());
 		i++;
 	}
 	if (i == 2)
@@ -216,8 +212,7 @@ void test_va(uintptr_t va)
 		em_debug("content: 0x%lx\n", *content);
 }
 
-void map_page(pte_t *root, uintptr_t va, uintptr_t pa, size_t n_pages,
-	      uintptr_t attr)
+void map_page(uintptr_t va, uintptr_t pa, size_t n_pages, uintptr_t attr)
 {
 	pte_t *pt;
 	char is_text = 0;
@@ -226,7 +221,7 @@ void map_page(pte_t *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 		return;
 	}
 
-	if (va <= 0x100000) // to be modified: used by load_elf
+	if (va <= 0x100000) // TODO to be modified: used by load_elf
 		is_text = 1;
 	if (is_text) {
 		insert_inverse_map(pa, va, n_pages);
@@ -238,7 +233,7 @@ void map_page(pte_t *root, uintptr_t va, uintptr_t pa, size_t n_pages,
 	// 	pa += EPAGE_SIZE * 512;
 	// 	n_pages -= 512;
 	// }
-	while (n_pages >= 1) {
+	while (n_pages > 0) {
 		page_directory_insert(va, pa, 3, attr);
 		// if (n_pages == 1)
 		// 	test_va(va);
@@ -258,7 +253,7 @@ uintptr_t ioremap(pte_t *root, uintptr_t pa, size_t size)
 	static uintptr_t drv_addr_alloc = 0;
 	em_debug("current root address: 0x%lx\n", get_page_table_root());
 	size_t n_pages = PAGE_UP(size) >> EPAGE_SHIFT;
-	map_page(NULL, EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
+	map_page(EDRV_DRV_START + drv_addr_alloc, pa, n_pages,
 		 PTE_V | PTE_W | PTE_R | PTE_D | PTE_X);
 	uintptr_t cur_addr = EDRV_DRV_START;
 	drv_addr_alloc += n_pages << 12;
@@ -275,7 +270,7 @@ uintptr_t alloc_page(pte_t *root, uintptr_t va, uintptr_t n_pages,
 	em_debug("va = 0x%lx, n = %d\n", va, n_pages);
 	while (n_pages >= 1) {
 		// pa = spa_get_pa_zero(id);
-		pa = spa_get_pa(id);
+		pa = page_pool_get_pa(id);
 		if (pa == prev_pa + EPAGE_SIZE &&
 		    SECTION_DOWN(pa) == SECTION_DOWN(prev_pa)) {
 			// inverse_map_add_count(base_pa);
@@ -305,7 +300,7 @@ uintptr_t alloc_page(pte_t *root, uintptr_t va, uintptr_t n_pages,
 	return pa;
 }
 
-void all_zero()
+void check_pte_all_zero()
 {
 	int i, j;
 	pte_t *tmp_pte;
@@ -314,8 +309,7 @@ void all_zero()
 		for (j = 0; j < 512; j++) {
 			tmp_pte = &page_table[i][j];
 			if (*((uintptr_t *)tmp_pte)) {
-				// em_error("%d:%d not zero! Setting zero...\n", i,
-				// 	 j);
+				em_error("%d:%d not zero!\n", i, j);
 				tmp_pte = 0;
 			}
 		}
@@ -330,7 +324,7 @@ inverse_map_t *insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count)
 {
 	int i = 0;
 
-	em_debug("pa: 0x%lx, va: 0x%lx\n", pa, va, count);
+	em_debug("pa: 0x%lx, va: 0x%lx, count: %d\n", pa, va, count);
 	for (; inv_map[i].pa && i < INVERSE_MAP_ENTRY_NUM; i++) {
 		if (pa == inv_map[i].pa) { // already exists; should update
 			em_debug(

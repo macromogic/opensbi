@@ -29,8 +29,8 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 
 #ifdef EBI_DEBUG
 	uintptr_t linux_satp = csr_read(CSR_SATP); //debug
-	uintptr_t va, pa;
 #endif
+	uintptr_t va, pa;
 
 	switch (funcid) {
 	case EBI_CREATE:

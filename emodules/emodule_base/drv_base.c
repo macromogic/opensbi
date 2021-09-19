@@ -78,26 +78,13 @@ void init_other_driver()
 		a0;                                                           \
 	})
 
-static void test(uintptr_t va)
-{
-	static uintptr_t pa = 0x48808000;
-	map_page(NULL, va, pa, 1, -1);
-	em_debug("log 1\n");
-	pa += EPAGE_SIZE;
-	em_debug("log 2\n");
-	SBI_CALL5(0xdeadbeef, va, read_csr(satp), 0, 0); // dump pte in m mode
-	uintptr_t *ptr	  = (uintptr_t *)va;
-	uintptr_t content = *ptr;
-	em_debug("memory dump of %p: 0x%lx\n", ptr, content);
-}
-
 void prepare_boot(uintptr_t usr_pc, uintptr_t usr_sp)
 {
 	em_debug("peri_reg_list: %p at %p\n", peri_reg_list, &peri_reg_list);
 	em_debug("enclave_id: 0x%lx at %p\n", enclave_id, &enclave_id);
 	em_debug("drv_addr_list: %p at %p\n", drv_addr_list, &drv_addr_list);
 
-	loop_test();
+	// loop_test();
 
 	init_other_driver();
 

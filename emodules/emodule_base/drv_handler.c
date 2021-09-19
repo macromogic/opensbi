@@ -5,6 +5,22 @@
 #include "drv_syscall.h"
 #include "drv_base.h"
 
+#define SHOW_REG(regs, regname) \
+	em_debug(#regname ": %lx\n", regs[regname##_INDEX])
+
+static inline void dump_umode_regs(const uintptr_t *regs)
+{
+	SHOW_REG(regs, A0);
+	SHOW_REG(regs, A1);
+	SHOW_REG(regs, A2);
+	SHOW_REG(regs, A3);
+	SHOW_REG(regs, A4);
+	SHOW_REG(regs, A5);
+	SHOW_REG(regs, A6);
+	SHOW_REG(regs, A7);
+	SHOW_REG(regs, GP);
+}
+
 void handle_interrupt(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 		      uintptr_t stval)
 {
@@ -36,6 +52,7 @@ void handle_exception(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 {
 	em_error("scause=%d, sepc=0x%llx, stval=0x%llx!\n", scause, sepc,
 		 stval);
+	dump_umode_regs(regs);
 	SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
 }
 

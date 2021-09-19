@@ -44,7 +44,7 @@ int ebi_brk(uintptr_t addr)
 		n_pages = PAGE_UP(addr - prog_brk) >> EPAGE_SHIFT;
 		em_debug("ebi_brk cp 2 n_pages = 0x%lx\n", n_pages);
 		alloc_page(NULL, PAGE_UP(prog_brk), n_pages,
-			   PTE_U | PTE_R | PTE_W, USR);
+			   PTE_U | PTE_R | PTE_W, IDX_USR);
 		em_debug("ebi_brk cp 3\n");
 	}
 	prog_brk = addr;

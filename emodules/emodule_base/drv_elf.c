@@ -1,6 +1,6 @@
 #include "drv_elf.h"
 
-uintptr_t __pt2pte(uint16_t pt)
+static inline uintptr_t __pt2pte(uint16_t pt)
 {
 	// uintptr_t res = PTE_V;
 	// if (pt & PF_R)
@@ -18,32 +18,33 @@ uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id,
 {
 	if (elf_check(elf_addr) != EBI_OK)
 		return EBI_ERROR;
-	Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf_addr;
 
-	Elf64_Phdr *phdr_arr = (Elf64_Phdr *)(elf_addr + ehdr->e_phoff);
-	em_debug("There are %d program header\n", ehdr->e_phnum);
-	Elf64_Phdr phdr;
+	Elf64_Ehdr *ehdr  = (Elf64_Ehdr *)elf_addr;
+	Elf64_Phdr *phdrs = (Elf64_Phdr *)(elf_addr + ehdr->e_phoff);
 	uintptr_t n_pages;
-	for (int i = 0; i < ehdr->e_phnum; i++) {
-		phdr = phdr_arr[i];
-		switch (phdr.p_type) {
+	int i;
+
+	em_debug("There is/are %d program header(s)\n", ehdr->e_phnum);
+	for (i = 0; i < ehdr->e_phnum; i++) {
+		switch (phdrs[i].p_type) {
 		case PT_LOAD: {
-			n_pages = (PAGE_UP(phdr.p_filesz) >> EPAGE_SHIFT) + 1;
-			em_debug("Mapping %d page from %x to %x\n", n_pages,
-				 PAGE_DOWN(phdr.p_vaddr),
-				 PAGE_DOWN(elf_addr + phdr.p_offset));
-			map_page(NULL, PAGE_DOWN(phdr.p_vaddr),
-				 PAGE_DOWN(elf_addr + phdr.p_offset), n_pages,
-				 PTE_U | __pt2pte(phdr.p_flags));
-			if ((n_pages << EPAGE_SHIFT) < phdr.p_memsz) {
-				n_pages =
-					PAGE_UP(phdr.p_memsz - phdr.p_filesz) >>
-					EPAGE_SHIFT;
-				alloc_page(
-					NULL,
-					PAGE_DOWN(phdr.p_vaddr + phdr.p_filesz),
-					n_pages, PTE_U | __pt2pte(phdr.p_flags),
-					id);
+			n_pages = (PAGE_UP(phdrs[i].p_filesz) >> EPAGE_SHIFT);
+			em_debug("Mapping %d page(s) from %x to %x\n", n_pages,
+				 PAGE_DOWN(phdrs[i].p_vaddr),
+				 PAGE_DOWN(elf_addr + phdrs[i].p_offset));
+			map_page(PAGE_DOWN(phdrs[i].p_vaddr),
+				 PAGE_DOWN(elf_addr + phdrs[i].p_offset),
+				 n_pages, PTE_U | __pt2pte(phdrs[i].p_flags));
+			if ((n_pages << EPAGE_SHIFT) < phdrs[i].p_memsz) {
+				n_pages = PAGE_UP(phdrs[i].p_memsz -
+						  phdrs[i].p_filesz) >>
+					  EPAGE_SHIFT;
+				alloc_page(NULL,
+					   PAGE_DOWN(phdrs[i].p_vaddr +
+						     phdrs[i].p_filesz),
+					   n_pages,
+					   PTE_U | __pt2pte(phdrs[i].p_flags),
+					   id);
 			}
 			break;
 		}
@@ -53,37 +54,44 @@ uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id,
 		}
 	}
 	// *prog_brk = PAGE_DOWN(phdr.p_paddr) + PAGE_UP((n_pages + 1)<<EPAGE_SHIFT);
-	*prog_brk = EUSR_HEAP_START;
-	// Elf64_Shdr *shdr_arr = (Elf64_Shdr *)(elf_addr + ehdr->e_shoff);
-	// //printd("there are %d segments\n", ehdr->e_shnum);
-	// for (int i = 0; i < ehdr->e_shnum; i++) {
-	//     Elf64_Shdr shdr = shdr_arr[i];
-	//     if (shdr.sh_size && (shdr.sh_flags & SHF_ALLOC) && (shdr.sh_type == SHT_NOBITS)) {
-	//         uintptr_t n_pages = (PAGE_UP(shdr.sh_size) >> EPAGE_SHIFT);
-	//         //printd("mapping %d page from %x to %x\n", n_pages, PAGE_DOWN(shdr.sh_addr), PAGE_DOWN(shdr.sh_addr) + PAGE_UP(n_pages<<EPAGE_SHIFT));
-	//         if (shdr.sh_flags & SHF_WRITE)
-	//             alloc_page((pte *)pt_root, PAGE_DOWN(shdr.sh_addr), n_pages, PTE_U | PTE_R | PTE_W, id);
-	//         else
-	//             alloc_page((pte *)pt_root, PAGE_DOWN(shdr.sh_addr), n_pages, PTE_U | PTE_R, id);
-	//     }
-	// }
+	*prog_brk	     = EUSR_HEAP_START;
+	Elf64_Shdr *shdr_arr = (Elf64_Shdr *)(elf_addr + ehdr->e_shoff);
+	em_debug("There is/are %d segment(s)\n", ehdr->e_shnum);
+	for (int i = 0; i < ehdr->e_shnum; i++) {
+		Elf64_Shdr shdr = shdr_arr[i];
+		if (shdr.sh_size && (shdr.sh_flags & SHF_ALLOC) &&
+		    (shdr.sh_type == SHT_NOBITS)) {
+			uintptr_t n_pages =
+				(PAGE_UP(shdr.sh_size) >> EPAGE_SHIFT);
+			em_debug("Mapping %d page(s) from %x to %x\n", n_pages,
+				 PAGE_DOWN(shdr.sh_addr),
+				 PAGE_DOWN(shdr.sh_addr) +
+					 PAGE_UP(n_pages << EPAGE_SHIFT));
+			if (shdr.sh_flags & SHF_WRITE)
+				alloc_page(NULL, PAGE_DOWN(shdr.sh_addr),
+					   n_pages,
+					   PTE_U | PTE_R | PTE_W | PTE_V, id);
+			else
+				alloc_page(NULL, PAGE_DOWN(shdr.sh_addr),
+					   n_pages, PTE_U | PTE_R | PTE_V, id);
+		}
+	}
 	return ehdr->e_entry;
 }
 
 uintptr_t elf_check(uintptr_t elf_addr)
 {
-	char *p_elf = (char *)elf_addr;
-	if (p_elf[0] != '\x7f' || p_elf[1] != 'E' || p_elf[2] != 'L' ||
-	    p_elf[3] != 'F') {
+	Elf64_Ehdr *ehdr       = (Elf64_Ehdr *)elf_addr;
+	unsigned char *e_ident = ehdr->e_ident;
+	if (e_ident[EI_MAG0] != ELFMAG0 || e_ident[EI_MAG1] != ELFMAG1 ||
+	    e_ident[EI_MAG2] != ELFMAG2 || e_ident[EI_MAG3] != ELFMAG3) {
 		em_error("Not ELF file\n");
 		return EBI_ERROR;
 	}
-	char xlen = p_elf[4] == ELFCLASS64 ? 64 : 32;
-	if (xlen != 64) {
+	if (e_ident[EI_CLASS] != ELFCLASS64) {
 		em_error("Not 64-bits file\n");
 		return EBI_ERROR;
 	}
-	Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf_addr;
 	if (ehdr->e_type != ET_EXEC) {
 		em_error("Not executable file\n");
 		return EBI_ERROR;

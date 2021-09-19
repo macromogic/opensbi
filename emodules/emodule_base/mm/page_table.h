@@ -4,7 +4,6 @@
 #include "../drv_mem.h"
 #include <sbi/ebi/memory.h>
 
-// #define ENC_PA_START    0x40000000
 #define EDRV_VA_START 0xC0000000
 #define EDRV_DRV_START 0xD0000000
 
@@ -26,12 +25,10 @@ typedef struct trie {
 } trie_t;
 typedef pte_t page_directory[512];
 
-extern uintptr_t ENC_PA_START;
 extern uintptr_t ENC_VA_PA_OFFSET;
 extern inverse_map_t inv_map[INVERSE_MAP_ENTRY_NUM];
 
-void map_page(pte_t *root, uintptr_t va, uintptr_t pa, size_t n_pages,
-	      uintptr_t attr);
+void map_page(uintptr_t va, uintptr_t pa, size_t n_pages, uintptr_t attr);
 uintptr_t ioremap(pte_t *, uintptr_t, size_t);
 uintptr_t alloc_page(pte_t *, uintptr_t, uintptr_t, uintptr_t, char);
 uintptr_t get_pa(uintptr_t);
@@ -41,7 +38,7 @@ void set_page_table_root(uintptr_t pt_root);
 uintptr_t get_page_table_root(void);
 uintptr_t get_page_table_root_pointer_addr();
 uintptr_t get_trie_root();
-void all_zero(void);
+void check_pte_all_zero(void);
 inverse_map_t *insert_inverse_map(uintptr_t pa, uintptr_t va, uint32_t count);
 void inverse_map_add_count(uintptr_t pa);
 void dump_inverse_map();

@@ -22,7 +22,7 @@ typedef struct {
 } drv_addr_t;
 
 extern drv_addr_t *drv_addr_list;
-uintptr_t drv_copy(uintptr_t *dst_addr, uintptr_t drv_mask);
+uintptr_t copy_drv_with_list(uintptr_t *dst_addr, uintptr_t drv_mask);
 void inform_peripheral(struct sbi_trap_regs *regs);
 
 #endif // __ASSEMBLER__
