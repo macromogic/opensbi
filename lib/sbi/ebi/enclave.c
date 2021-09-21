@@ -266,9 +266,9 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	uintptr_t mepc_pa =
 		get_pa((pte_t *)((host->ns_satp & 0xFFFFFFFFFFF) << 12),
 		       host->ns_mepc);
-#endif
 	sbi_debug("MEPC: va=%lx, pa=%lx\n", host->ns_mepc, mepc_pa);
 	debug_memdump(mepc_pa, 32);
+#endif
 
 	// Assign the enclave to a core
 	spin_lock(&core_lock);
