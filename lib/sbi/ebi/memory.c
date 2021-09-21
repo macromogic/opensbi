@@ -56,6 +56,7 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 	uintptr_t eid;
 	uintptr_t ret = 0;
 	region_t smallest, avail;
+	int tried_flag = 0;
 
 	if (!ectx) {
 		sbi_error("Context is NULL!\n");
@@ -115,6 +116,9 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 	//    N + 1 sections. If found, perform section migration and allocate
 	//    a section.
 try_find:
+	if (tried_flag) {
+		return 0;
+	}
 	smallest = find_smallest_region(eid);
 	avail	 = find_avail_region_larger_than(smallest.length);
 	if (avail.length) {
@@ -125,6 +129,7 @@ try_find:
 
 	// 4. If still not found, do page compaction, then repeat step 3.
 	page_compaction();
+	tried_flag = 1;
 	sbi_debug("After compaction\n");
 	// repeat step 3
 	goto try_find;
