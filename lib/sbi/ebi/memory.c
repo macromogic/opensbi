@@ -72,7 +72,6 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 	// 1. Look for available sections adjacent to allocated
 	//    sections owned by the enclave. If found, update PMP config
 	//    and return the pa of the section
-	spin_lock(&memory_pool_lock);
 	for_each_section_in_pool(memory_pool, sec, i)
 	{
 		if (sec->owner != eid)
@@ -96,7 +95,6 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 			}
 		}
 	}
-	spin_unlock(&memory_pool_lock);
 
 	// 2. If no such section exists, then check whether the PMP resource
 	//    has run out. If not, allocate a new section for the enclave
