@@ -9,9 +9,24 @@ spinlock_t memory_pool_lock;
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic push
-static void dump_section_ownership()
+void dump_section_ownership()
 {
-	sbi_debug("Nothing\n");
+	int i, j;
+	section_t *sec;
+	const int line_len = 32;
+
+	for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
+
+		for (i = 0, sec = &memory_pool[i + j];
+			i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
+			i++, sec = &memory_pool[i + j]) {
+				if (sec->owner < 0)
+					sbi_printf("x");
+				else
+					sbi_printf("%d", sec->owner);
+			}
+		sbi_printf("\n");
+	}
 }
 #pragma GCC diagnostic pop
 
@@ -145,7 +160,9 @@ void free_section_for_enclave(int eid)
 	int i;
 	section_t *sec;
 
+#ifdef EBI_DEBUG
 	dump_section_ownership();
+#endif
 
 	spin_lock(&memory_pool_lock);
 	sbi_debug("Got memory pool lock\n");
@@ -157,7 +174,9 @@ void free_section_for_enclave(int eid)
 	}
 	spin_unlock(&memory_pool_lock);
 
+#ifdef EBI_DEBUG
 	dump_section_ownership();
+#endif
 }
 
 int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
