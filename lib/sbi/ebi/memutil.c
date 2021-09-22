@@ -38,20 +38,19 @@ uint64_t load_uint64_t(const uint64_t *addr, uintptr_t mepc)
 
 section_t *find_available_section()
 {
-	int i;
-	section_t *sec;
+	uintptr_t ret_sfn = 0;
+	section_t *sec = NULL;
+	region_t reg = find_largest_avail();
 
-	spin_lock(&memory_pool_lock);
-	for_each_section_in_pool(memory_pool, sec, i)
-	{
-		if (sec->owner < 0) {
-			spin_unlock(&memory_pool_lock);
-			return sec;
-		}
+	if (reg.length == 0) {
+		sbi_printf("[M mode find_avail_section] OOM!\n");
+		return NULL;
 	}
 
-	spin_unlock(&memory_pool_lock);
-	return NULL;
+	ret_sfn = reg.sfn + (reg.length >> 1);
+	sec = sfn_to_section(ret_sfn);
+	
+	return sec;
 }
 
 uintptr_t alloc_section_for_host_os()
@@ -96,6 +95,56 @@ int get_avail_pmp_count(enclave_context_t *ectx)
 	}
 
 	return count;
+}
+
+region_t find_largest_avail()
+{
+	int i;
+	section_t *sec;
+	uintptr_t head = 0, tail = 0; // sfn
+	int hit = 0; // state machine flag
+	int max = 0;
+	int len;
+	region_t ret = {0};
+
+	spin_lock(&memory_pool_lock);
+	for_each_section_in_pool(memory_pool, sec, i) {
+		if (sec->owner >= 0 && hit) {
+			len = (int)(tail - head + 1);
+			if (len > max) {
+				max = len;
+				ret.sfn = head;
+				ret.length = max;
+			}
+			hit = 0;
+		}
+
+		if (sec->owner < 0 && !hit) {
+			head = sec->sfn;
+			tail = sec->sfn;
+			hit = 1;
+			continue;
+		}
+
+		if (sec->owner < 0 && hit) {
+			tail++;
+		}
+	}
+
+	// if the region is at the end of the section list
+	if (hit) {
+		len = (int)(tail - head + 1);
+		if (len > max) {
+			max = len;
+			ret.sfn = head;
+			ret.length = max;
+		}
+	}
+	// sbi_printf("[M mode find_largest_avail] largest: at 0x%lx, %d sections\n",
+			// ret.sfn << SECTION_SHIFT, ret.length);
+	spin_unlock(&memory_pool_lock);
+
+	return ret;
 }
 
 region_t find_smallest_region(int eid)
