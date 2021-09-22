@@ -71,6 +71,22 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 		exit_enclave(regs);
 		break;
 
+	case SBI_EXT_EBI_SUSPEND:
+		sbi_debug("suspend enclave %lx\n", regs->a0);
+		suspend_enclave(eid, regs, mepc);
+		resume_enclave(0, regs);
+		break;
+	
+	case SBI_EXT_EBI_RESUME:
+		sbi_debug("resume enclave %lx\n", regs->a0);
+		if (eid != 0) {
+			sbi_error("should call resume from Linux\n");
+			break;
+		}
+		suspend_enclave(0, regs, mepc);
+		resume_enclave(regs->a0, regs);
+		break;
+
 	case SBI_EXT_EBI_PERI_INFORM:
 		inform_peripheral(regs);
 		break;

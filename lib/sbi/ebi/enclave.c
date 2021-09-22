@@ -122,6 +122,33 @@ static void restore_umode_context(enclave_context_t *ectx,
 	sbi_memcpy(regs, ectx->umode_context, INTEGER_CONTEXT_SIZE);
 }
 
+static void save_csr_context(enclave_context_t *from, uintptr_t mepc, struct sbi_trap_regs *regs)
+{
+	from->ns_satp = 	csr_read(CSR_SATP);
+	from->ns_mepc = 	mepc + 4;
+	from->ns_mstatus = 	regs->mstatus;
+	from->ns_medeleg = 	csr_read(CSR_MEDELEG);
+	from->ns_sie = 		csr_read(CSR_SIE);
+	from->ns_stvec = 	csr_read(CSR_STVEC);
+	from->ns_sstatus = 	csr_read(CSR_SSTATUS);
+	from->ns_sscratch = 	csr_read(CSR_SSCRATCH);
+}
+
+static void restore_csr_context(enclave_context_t *into, struct sbi_trap_regs *regs)
+{
+	csr_write(CSR_SATP, into->ns_satp);
+	flush_tlb();
+
+	csr_write(CSR_MEDELEG, into->ns_medeleg);
+	csr_write(CSR_SIE, into->ns_sie);
+	csr_write(CSR_STVEC, into->ns_stvec);
+	csr_write(CSR_SSTATUS, into->ns_sstatus);
+	csr_write(CSR_SSCRATCH, into->ns_sscratch);
+	
+	regs->mepc = 	into->ns_mepc - 4;
+	regs->mstatus = into->ns_mstatus;
+}
+
 static void enclave_mem_free(enclave_context_t *ectx)
 {
 	int eid = ectx->id;
@@ -338,16 +365,66 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	return EBI_OK;
 }
 
-uintptr_t pause_enclave(uintptr_t eid, uintptr_t *regs, uintptr_t mepc)
+uintptr_t suspend_enclave(uintptr_t eid, struct sbi_trap_regs *regs, uintptr_t mepc)
 {
-	// TODO
+	enclave_context_t *from = &(enclaves[eid]);
+	uint32_t hartid = current_hartid();
+	
+	if (from->status != ENC_RUN) {
+		sbi_error("suspend error\n");
+		return EBI_ERROR;
+	}
+
+	spin_lock(&core_lock);
+	enclave_on_core[hartid] = 0;
+	spin_unlock(&core_lock);
+
+	save_umode_context(from, regs);
+	save_csr_context(from ,mepc, regs);
+
+	pmp_switch(from);
+
+	csr_write(CSR_SATP, 0);
+	from->status = ENC_IDLE;
+
+	flush_tlb();
+
 	return 0;
 }
 
-uintptr_t resume_enclave(uintptr_t eid, uintptr_t *regs)
+uintptr_t resume_enclave(uintptr_t eid, struct sbi_trap_regs *regs)
 {
-	// TODO
-	return 0;
+	enclave_context_t *into = &(enclaves[eid]); 
+	uint32_t hartid = current_hartid();
+	if (into->status != ENC_IDLE && into->status != ENC_LOAD) {
+		sbi_error("Resume error\n");
+		return EBI_ERROR;
+	}
+
+	spin_lock(&core_lock);
+	enclave_on_core[hartid] = eid;
+	spin_unlock(&core_lock);
+
+	pmp_switch(into);
+	restore_csr_context(into, regs);
+	if (into->status == ENC_IDLE)
+		restore_umode_context(into, regs);
+	else {
+		// Initialize parameters for:
+		// init_mem(_, id, mem_start, usr_size, drv_list, argc, argv)
+		regs->a5 = regs->a1;		      // a5: argc
+		regs->a6 = regs->a2;		      // a6: argv
+		regs->a0 = eid;			      // a0: (dummy)
+		regs->a1 = eid;			      // a1: mem_start
+		regs->a2 = into->pa;		      // a2: mem_start
+		regs->a3 = into->enclave_binary_size; // a3: usr_size
+		regs->a4 = into->drv_list;	      // a4: drv_list
+		// argc and argv may be unused
+	}
+
+	into->status = ENC_RUN;
+
+	return eid;
 }
 
 enclave_context_t *eid_to_context(uintptr_t eid)
