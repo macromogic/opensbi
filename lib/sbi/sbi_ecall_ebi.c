@@ -72,7 +72,7 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 		break;
 
 	case SBI_EXT_EBI_SUSPEND:
-		sbi_debug("suspend enclave %lx\n", regs->a0);
+		sbi_debug("suspend enclave %x\n", eid);
 		suspend_enclave(eid, regs, mepc);
 		resume_enclave(0, regs);
 		break;
@@ -84,7 +84,9 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 			break;
 		}
 		suspend_enclave(0, regs, mepc);
-		resume_enclave(regs->a0, regs);
+		if (resume_enclave(regs->a0, regs) == EBI_ERROR) {
+			resume_enclave(0, regs);
+		}
 		break;
 
 	case SBI_EXT_EBI_PERI_INFORM:
@@ -114,6 +116,7 @@ static int sbi_ecall_ebi_handler(unsigned long extid, unsigned long funcid,
 			regs->a2 = SECTION_SIZE;
 		} else {
 			sbi_error("allocation failed\n");
+			while (1);
 			exit_enclave(regs);
 		}
 		break;
