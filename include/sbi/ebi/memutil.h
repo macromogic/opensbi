@@ -6,6 +6,9 @@
  */
 
 #include <sbi/ebi/memory.h>
+
+extern int compacted;
+
 typedef struct {
 	uintptr_t sfn;
 	size_t length;
@@ -29,6 +32,7 @@ uint64_t load_uint64_t(const uint64_t *addr, uintptr_t mepc);
 section_t *find_available_section();
 uintptr_t alloc_section_for_host_os();
 int get_avail_pmp_count(enclave_context_t *ectx);
+region_t find_largest_avail();
 region_t find_smallest_region(int eid);
 region_t find_avail_region_larger_than(int length);
 void page_compaction(void);

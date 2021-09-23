@@ -4,6 +4,8 @@
 #include <sbi/sbi_string.h>
 #include <sbi/riscv_encoding.h>
 
+int compacted = 0;
+
 uint8_t load_uint8_t(const uint8_t *addr, uintptr_t mepc)
 {
 	register uintptr_t __mepc asm("a2") = mepc;
@@ -38,20 +40,19 @@ uint64_t load_uint64_t(const uint64_t *addr, uintptr_t mepc)
 
 section_t *find_available_section()
 {
-	int i;
-	section_t *sec;
+	uintptr_t ret_sfn = 0;
+	section_t *sec = NULL;
+	region_t reg = find_largest_avail();
 
-	spin_lock(&memory_pool_lock);
-	for_each_section_in_pool(memory_pool, sec, i)
-	{
-		if (sec->owner < 0) {
-			spin_unlock(&memory_pool_lock);
-			return sec;
-		}
+	if (reg.length == 0) {
+		sbi_printf("[M mode find_avail_section] OOM!\n");
+		return NULL;
 	}
 
-	spin_unlock(&memory_pool_lock);
-	return NULL;
+	ret_sfn = reg.sfn + (reg.length >> 1);
+	sec = sfn_to_section(ret_sfn);
+	
+	return sec;
 }
 
 uintptr_t alloc_section_for_host_os()
@@ -78,6 +79,7 @@ uintptr_t alloc_section_for_host_os()
 	// should never reach here
 	spin_unlock(&memory_pool_lock);
 	sbi_error("Out of memory!\n");
+	while(1);
 	return 0;
 }
 
@@ -98,121 +100,200 @@ int get_avail_pmp_count(enclave_context_t *ectx)
 	return count;
 }
 
-region_t find_smallest_region(int eid)
+region_t find_largest_avail()
 {
 	int i;
 	section_t *sec;
-	uintptr_t head = 0, tail = 0;
-	int hit = 0;
-	size_t len;
-	region_t ret = { 0 };
+	uintptr_t head = 0, tail = 0; // sfn
+	int hit = 0; // state machine flag
+	int max = 0;
+	int len;
+	region_t ret = {0};
 
 	spin_lock(&memory_pool_lock);
-	for_each_section_in_pool(memory_pool, sec, i)
-	{
-		if (sec->owner != eid && hit) {
-			len = (size_t)(tail - head + 1);
-			if (len < ret.length) {
-				ret.length = len;
-				ret.sfn	   = head;
+	for_each_section_in_pool(memory_pool, sec, i) {
+		if (sec->owner >= 0 && hit) {
+			len = (int)(tail - head + 1);
+			if (len > max) {
+				max = len;
+				ret.sfn = head;
+				ret.length = max;
 			}
 			hit = 0;
 		}
 
-		if (sec->owner == eid) {
-			if (!hit) {
-				head = sec->sfn;
-				tail = sec->sfn;
-				hit  = 1;
-			} else {
-				tail++;
-			}
+		if (sec->owner < 0 && !hit) {
+			head = sec->sfn;
+			tail = sec->sfn;
+			hit = 1;
+			continue;
+		}
+
+		if (sec->owner < 0 && hit) {
+			tail++;
 		}
 	}
+
+	// if the region is at the end of the section list
+	if (hit) {
+		len = (int)(tail - head + 1);
+		if (len > max) {
+			max = len;
+			ret.sfn = head;
+			ret.length = max;
+		}
+	}
+	// sbi_printf("[M mode find_largest_avail] largest: at 0x%lx, %d sections\n",
+			// ret.sfn << SECTION_SHIFT, ret.length);
 	spin_unlock(&memory_pool_lock);
 
-	if (hit) {
-		len = (size_t)(tail - head + 1);
-		if (len < ret.length) {
-			ret.length = len;
-			ret.sfn	   = head;
-		}
-	}
 	return ret;
 }
 
+region_t find_smallest_region(int eid)
+{
+	int i;
+	section_t *sec;
+	uintptr_t head = 0, tail = 0; // sfn
+	int hit = 0; // state machine flag
+	int min = MEMORY_POOL_SECTION_NUM + 1;
+	int len;
+	region_t ret = {0};
+
+	for_each_section_in_pool(memory_pool, sec, i) {
+		if (sec->owner != eid && hit) {
+			len = (int)(tail - head + 1);
+			if (len < min) {
+				min = len;
+				ret.sfn = head;
+				ret.length = min;
+			}
+			hit = 0;
+		}
+
+		if (sec->owner == eid && !hit) {
+			head = sec->sfn;
+			tail = sec->sfn;
+			hit = 1;
+			continue;
+		}
+
+		if (sec->owner == eid && hit) {
+			tail++;
+		}
+	}
+
+	// if the region is at the end of the section list
+	if (hit) {
+		len = (int)(tail - head + 1);
+		if (len < min) {
+			min = len;
+			ret.sfn = head;
+			ret.length = min;
+		}
+	}
+
+	// sbi_printf("[M mode find_smallest_region] %d smallest: at 0x%lx, %d sections\n",
+			// eid, ret.sfn << SECTION_SHIFT, ret.length);
+
+	return ret;
+}
 region_t find_avail_region_larger_than(int length)
 {
 	int i;
 	section_t *sec;
 	uintptr_t head = 0, tail = 0;
 	int hit = 0;
-	size_t len;
-	region_t ret = { 0 };
+	int len;
+	region_t ret;
 
-	spin_lock(&memory_pool_lock);
-	for_each_section_in_pool(memory_pool, sec, i)
-	{
+	sbi_memset((void *)&ret, 0, sizeof(region_t));
+
+	for_each_section_in_pool(memory_pool, sec, i) {
 		if (sec->owner >= 0 && hit) {
-			len = (size_t)(tail - head + 1);
+			len = (int)(tail - head + 1);
 			if (len > length) {
 				ret.length = len;
-				ret.sfn	   = head;
-				spin_unlock(&memory_pool_lock);
+				ret.sfn = head;
 				return ret;
 			}
 			hit = 0;
 		}
 
-		if (sec->owner == 0) {
-			if (!hit) {
-				head = sec->sfn;
-				tail = sec->sfn;
-				hit  = 1;
-			} else {
-				tail++;
-			}
+		if (sec->owner < 0 && !hit) {
+			head = sec->sfn;
+			tail = sec->sfn;
+			hit = 1;
+			continue;
+		}
+
+		if (sec->owner < 0 && hit) {
+			tail++;
 		}
 	}
-	spin_unlock(&memory_pool_lock);
 
+	// if the region is at the end of the section list
 	if (hit) {
-		len = (size_t)(tail - head + 1);
+		len = (int)(tail - head + 1);
 		if (len > length) {
 			ret.length = len;
-			ret.sfn	   = head;
+			ret.sfn = head;
+			return ret;
 		}
 	}
+
+	// got here means not found
 	return ret;
 }
 
-void page_compaction(void)
+void dump_utilization_rate()
 {
-	uintptr_t low_sfn  = 0;
-	uintptr_t high_sfn = MEMORY_POOL_SECTION_NUM - 1;
-	section_t *low_section, *high_section;
-	spin_lock(&memory_pool_lock);
-	while (1) {
-		for (; low_sfn < high_sfn; ++low_sfn) {
-			low_section = &memory_pool[low_sfn];
-			if (low_section->owner < 0) {
-				break;
-			}
+	int i;
+	section_t *sec;
+	int count = 0;
+
+	for_each_section_in_pool(memory_pool, sec, i) {
+		if (sec->owner > 0) {
+			count++;
 		}
-		for (; low_sfn < high_sfn; --high_sfn) {
-			high_section = &memory_pool[high_sfn];
-			if (high_section->owner > 0) {
-				break;
-			}
-		}
-		if (low_sfn >= high_sfn) {
-			break;
-		}
-		section_migration(high_sfn, low_sfn);
-		++low_sfn;
-		--high_sfn;
 	}
-	spin_unlock(&memory_pool_lock);
+
+	sbi_printf("utilization rate: %d/%d\n", count, (int)MEMORY_POOL_SECTION_NUM);
+}
+
+void page_compaction()
+{
+	int i;
+	section_t *sec;
+	section_t *tmp;
+	int done = 1;
+	static int count = 0;
+
+	dump_section_ownership();
+
+	sbi_printf("[M mode section_compaction]\n");
+	dump_utilization_rate();
+
+	for_each_section_in_pool(memory_pool, sec, i) {
+		done = 1;
+		if (sec->owner < 0) {
+			for (int j = 1; i + j < MEMORY_POOL_SECTION_NUM; j++) {
+				tmp = sfn_to_section(sec->sfn + j);
+				if (tmp->owner > 0) {
+					section_migration(tmp->sfn, sec->sfn);
+					done = 0;
+					break;
+				}
+			}
+
+			if (done) {
+				count++;
+				dump_section_ownership();
+				return;
+			}
+			
+		}
+	}
 }
 
 void update_tree_pte(uintptr_t root, uintptr_t pa_diff)
@@ -268,9 +349,9 @@ void update_leaf_pte(uintptr_t root, uintptr_t va, uintptr_t pa)
 void set_section_zero(uintptr_t sfn)
 {
 	char *s = (char *)(sfn << SECTION_SHIFT);
-	sbi_debug("section start: %p\n", s);
+	// sbi_debug("section start: %p\n", s);
 	sbi_memset(s, 0, SECTION_SIZE);
-	sbi_debug("setting zero done\n");
+	// sbi_debug("setting zero done\n");
 }
 
 void update_section_info(uintptr_t sfn, int owner, uintptr_t va)
@@ -290,7 +371,7 @@ void free_section(uintptr_t sfn)
 	if (sec->owner < 0)
 		return;
 
-	sbi_debug("freeing section 0x%lx\n", sfn);
+	// sbi_debug("freeing section 0x%lx\n", sfn);
 
 	// clear memory
 	set_section_zero(sfn);

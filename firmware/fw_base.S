@@ -774,7 +774,7 @@ fw_fdt_bin:
 
   .globl _base_start, _base_end
 _base_start:
-  .incbin "emodule_base"
+  .incbin "../build/emodules/emodule_base/emodule_base.bin"
 _base_end:
 
   .section ".drvconsole","a",@progbits
@@ -782,5 +782,5 @@ _base_end:
 
   .globl _console_start, _console_end
 _console_start:
-  .incbin "drv_console"
+  .incbin "../build/emodules/drv_console/drv_console.bin"
 _console_end:

@@ -57,8 +57,10 @@ extern void init_enclaves(void);
 extern uintptr_t create_enclave(struct sbi_trap_regs *args, uintptr_t mepc);
 extern uintptr_t enter_enclave(struct sbi_trap_regs *args, uintptr_t mepc);
 extern uintptr_t exit_enclave(struct sbi_trap_regs *regs);
-extern uintptr_t pause_enclave(uintptr_t id, uintptr_t *regs, uintptr_t mepc);
-extern uintptr_t resume_enclave(uintptr_t id, uintptr_t *regs);
+extern uintptr_t suspend_enclave(uintptr_t id, struct sbi_trap_regs *regs, uintptr_t mepc);
+extern uintptr_t resume_enclave(uintptr_t id, struct sbi_trap_regs *regs);
 enclave_context_t *eid_to_context(uintptr_t eid);
+int enclave_num();
+int check_alive(uintptr_t eid);
 
 #endif // EBI_ENCLAVE_H
