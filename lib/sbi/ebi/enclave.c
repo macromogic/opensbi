@@ -375,7 +375,7 @@ uintptr_t resume_enclave(uintptr_t eid, struct sbi_trap_regs *regs)
 	uint32_t hartid = current_hartid();
 	if (into->status != ENC_IDLE) {
 		sbi_error("Resume %lx error\n", eid);
-		while(1);
+		// while(1);
 		return EBI_ERROR;
 	}
 
