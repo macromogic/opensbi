@@ -246,6 +246,21 @@ region_t find_avail_region_larger_than(int length)
 	return ret;
 }
 
+void dump_utilization_rate()
+{
+	int i;
+	section_t *sec;
+	int count = 0;
+
+	for_each_section_in_pool(memory_pool, sec, i) {
+		if (sec->owner > 0) {
+			count++;
+		}
+	}
+
+	sbi_printf("utilization rate: %d/%d\n", count, (int)MEMORY_POOL_SECTION_NUM);
+}
+
 void page_compaction()
 {
 	int i;
@@ -257,6 +272,7 @@ void page_compaction()
 	dump_section_ownership();
 
 	sbi_printf("[M mode section_compaction]\n");
+	dump_utilization_rate();
 
 	for_each_section_in_pool(memory_pool, sec, i) {
 		done = 1;
