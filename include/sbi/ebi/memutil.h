@@ -6,6 +6,9 @@
  */
 
 #include <sbi/ebi/memory.h>
+
+extern int compacted;
+
 typedef struct {
 	uintptr_t sfn;
 	size_t length;
