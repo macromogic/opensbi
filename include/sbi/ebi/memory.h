@@ -49,8 +49,11 @@
 #define MASK_L2 0x7fc0000000
 
 // make sure these addresses are section aligned
-#define MEMORY_POOL_START 0xE0000000
-#define MEMORY_POOL_END 0x4BF800000
+#define MEMORY_POOL_START 0x140000000
+// #define MEMORY_POOL_START 0x180000000
+// #define MEMORY_POOL_END (0x280000000 - SECTION_SIZE * 32)
+#define MEMORY_POOL_SIZE  0x30000000
+#define MEMORY_POOL_END (MEMORY_POOL_SIZE + MEMORY_POOL_START)
 #define MEMORY_POOL_SECTION_NUM \
 	((MEMORY_POOL_END - MEMORY_POOL_START) >> SECTION_SHIFT)
 
@@ -86,6 +89,7 @@ typedef struct {
 	uint32_t count;
 } inverse_map_t;
 
+void dump_section_ownership();
 void flush_tlb(void);
 void init_memory_pool(void);
 uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va);

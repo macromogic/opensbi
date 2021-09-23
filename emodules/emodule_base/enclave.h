@@ -1,6 +1,7 @@
 #pragma once
 
-#define EMODULE_GLOBAL_DEBUG
+
+// #define EMODULE_GLOBAL_DEBUG
 
 #define SBI_EXT_EBI 0x19260817
 #define EBI_START   398

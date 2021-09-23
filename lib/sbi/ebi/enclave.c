@@ -130,6 +130,10 @@ static void enclave_mem_free(enclave_context_t *ectx)
 	ectx->pt_root_addr     = 0;
 	ectx->inverse_map_addr = 0;
 
+	for (int i = 0; i < PMP_REGION_MAX; i++) {
+		ectx->pmp_reg[i].used = 0;
+	}
+
 	sbi_debug("Freeing enclave %d\n", eid);
 	free_section_for_enclave(eid);
 	sbi_debug("Freed enclave %d\n", eid);
@@ -240,7 +244,7 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	enclave_context_t *host = &enclaves[0];
 	uint32_t hart_id	= current_hartid();
 	if (ectx->status != ENC_LOAD || host->status != ENC_RUN) {
-		sbi_error("Invalid runtime state!\n");
+		sbi_error("Invalid runtime state! eid = %lx\n", id);
 		sbi_error("ectx->status = %d, host->status = %d\n",
 			  ectx->status, host->status);
 		return EBI_ERROR;
@@ -265,11 +269,13 @@ uintptr_t enter_enclave(struct sbi_trap_regs *regs, uintptr_t mepc)
 	dump_csr_context(host);
 	sbi_debug(">>> enclave ctx:\n");
 	dump_csr_context(ectx);
+#ifdef EBI_DEBUG
 	uintptr_t mepc_pa =
 		get_pa((pte_t *)((host->ns_satp & 0xFFFFFFFFFFF) << 12),
 		       host->ns_mepc);
 	sbi_debug("MEPC: va=%lx, pa=%lx\n", host->ns_mepc, mepc_pa);
 	debug_memdump(mepc_pa, 32);
+#endif
 
 	// Assign the enclave to a core
 	spin_lock(&core_lock);
@@ -303,7 +309,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	enclave_context_t *ectx = &enclaves[id];
 	enclave_context_t *host = &enclaves[0];
 	if (ectx->status != ENC_RUN || host->status != ENC_IDLE) {
-		sbi_error("Invalid runtime state!\n");
+		sbi_error("Invalid runtime state! eid = %lx\n", id);
 		sbi_error("ectx->status = %d, host->status = %d\n",
 			  ectx->status, host->status);
 		return EBI_ERROR;
@@ -323,6 +329,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	restore_umode_context(host, regs);
 	restore_enclave_context(host, regs);
 	regs->mepc += 4;
+#ifdef EBI_DEBUG
 	uintptr_t satp = csr_read(CSR_SATP);
 	uintptr_t mepc_pa =
 		get_pa((pte_t *)((satp & 0xFFFFFFFFFFF) << 12), host->ns_mepc);
@@ -330,6 +337,7 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	debug_memdump(mepc_pa, 32);
 
 	dump_csr_context(host);
+#endif
 
 	mtvec = csr_read(CSR_MTVEC);
 	sbi_debug("After: mtvec=%lx\n", mtvec);
@@ -343,19 +351,75 @@ uintptr_t exit_enclave(struct sbi_trap_regs *regs)
 	return EBI_OK;
 }
 
-uintptr_t pause_enclave(uintptr_t eid, uintptr_t *regs, uintptr_t mepc)
+uintptr_t suspend_enclave(uintptr_t eid, struct sbi_trap_regs *regs, uintptr_t mepc)
 {
-	// TODO
+	enclave_context_t *from = &(enclaves[eid]);
+	uint32_t hartid = current_hartid();
+	
+	if (from->status != ENC_RUN) {
+		sbi_error("Suspend error\n");
+		return EBI_ERROR;
+	}
+
+	spin_lock(&core_lock);
+	enclave_on_core[hartid] = 0;
+	spin_unlock(&core_lock);
+
+	save_umode_context(from, regs);
+	save_enclave_context(from ,mepc, regs);
+
+	pmp_switch(from);
+
+	csr_write(CSR_SATP, 0);
+	from->status = ENC_IDLE;
+
+	flush_tlb();
+
 	return 0;
 }
 
-uintptr_t resume_enclave(uintptr_t eid, uintptr_t *regs)
+uintptr_t resume_enclave(uintptr_t eid, struct sbi_trap_regs *regs)
 {
-	// TODO
-	return 0;
+	enclave_context_t *into = &(enclaves[eid]); 
+	uint32_t hartid = current_hartid();
+	if (into->status != ENC_IDLE) {
+		sbi_error("Resume %lx error\n", eid);
+		// while(1);
+		return EBI_ERROR;
+	}
+
+	spin_lock(&core_lock);
+	enclave_on_core[hartid] = eid;
+	spin_unlock(&core_lock);
+
+	pmp_switch(into);
+	restore_enclave_context(into, regs);
+	restore_umode_context(into, regs);
+
+	into->status = ENC_RUN;
+
+	return eid;
 }
 
 enclave_context_t *eid_to_context(uintptr_t eid)
 {
 	return &enclaves[eid];
+}
+
+int enclave_num()
+{
+	int count = 0;
+	for (int i = 1; i <= NUM_ENCLAVE; ++i) {
+		if (enclaves[i].status != ENC_FREE) {
+			count++;
+		}
+	}
+	return count;
+}
+
+int check_alive(uintptr_t eid)
+{
+	if (eid_to_context(eid)->status != ENC_FREE)
+		return 1;
+	return 0;
 }

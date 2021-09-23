@@ -6,9 +6,10 @@
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_console.h>
 
-#define PMP_REGION_MAX 4
+#define PMP_REGION_MAX 1
 
-#define EBI_DEBUG
+
+// #define EBI_DEBUG
 
 #ifdef EBI_DEBUG
 #define sbi_debug(fmt, ...) sbi_printf("[%s] " fmt, __func__, ##__VA_ARGS__)

@@ -60,9 +60,9 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t mem_start,
 	uint8_t md2hash[MD2_BLOCK_SIZE];
 	md2((void *)mem_start, usr_size, md2hash);
 	end_cycle = read_csr(cycle);
-	printd("[md2]%lu ", end_cycle - begin_cycle);
 
 #ifdef EMODULE_GLOBAL_DEBUG
+	printd("[md2]%lu ", end_cycle - begin_cycle);
 	printd("[S mode init_mem] _ = %d\n", _);
 	printd("[S mode init_mem] id = %d\n", id);
 	printd("[S mode init_mem] mem_start = 0x%lx\n", mem_start);

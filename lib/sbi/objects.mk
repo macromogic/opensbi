@@ -48,3 +48,4 @@ libsbi-objs-y += ebi/memory.o
 libsbi-objs-y += ebi/memutil.o
 libsbi-objs-y += ebi/pmp.o
 libsbi-objs-y += ebi/debug.o
+libsbi-objs-y += ebi/monitor.o

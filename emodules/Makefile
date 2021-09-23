@@ -1,8 +1,10 @@
 SUBDIRS := drv_console emodule_base
 
-.PHONY: all clean
+all: $(SUBDIRS)
+$(SUBDIRS):
+	make -C $@
 
-all clean:
-	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir -f Makefile $@; \
-	done
+clean:
+	@rm -rf ../build/emodules
+
+.PHONY: all $(SUBDIRS)
