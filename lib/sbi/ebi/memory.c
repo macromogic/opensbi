@@ -17,7 +17,7 @@ void dump_section_ownership()
 	const int line_len = 32; // brief version
 
 	// complex version (do not delete)
-	// sbi_printf("[M mode section_ownership_dump start]-------------------------\n");
+	sbi_printf("[M mode section_ownership_dump start]-------------------------\n");
 	// for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
 	// 	for (i = 0, sec = &memory_pool[i+j];
 	// 			i < line_len;
@@ -41,7 +41,7 @@ void dump_section_ownership()
 		
 	}
 
-	sbi_debug("[M mode section_ownership_dump end]---------------------------\n");
+	sbi_printf("[M mode section_ownership_dump end]---------------------------\n");
 }
 #pragma GCC diagnostic pop
 
