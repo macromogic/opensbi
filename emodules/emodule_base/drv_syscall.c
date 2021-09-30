@@ -56,7 +56,7 @@ int ebi_brk(uintptr_t addr)
 int ebi_write(uintptr_t fd, uintptr_t content)
 {
 	/* stdout */
-	drv_fetch(DRV_CONSOLE);
+	// drv_fetch(DRV_CONSOLE);
 	cmd_handler console_handler =
 		(cmd_handler)drv_addr_list[DRV_CONSOLE].drv_start;
 	if (fd == 1) {
@@ -66,7 +66,7 @@ int ebi_write(uintptr_t fd, uintptr_t content)
 			str++;
 		}
 	}
-	drv_release(DRV_CONSOLE);
+	// drv_release(DRV_CONSOLE);
 	return 0;
 }
 

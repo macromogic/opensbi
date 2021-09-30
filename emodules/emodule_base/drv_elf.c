@@ -54,28 +54,28 @@ uintptr_t elf_load(uintptr_t pt_root, uintptr_t elf_addr, char id,
 		}
 	}
 	// *prog_brk = PAGE_DOWN(phdr.p_paddr) + PAGE_UP((n_pages + 1)<<EPAGE_SHIFT);
-	*prog_brk	     = EUSR_HEAP_START;
-	Elf64_Shdr *shdr_arr = (Elf64_Shdr *)(elf_addr + ehdr->e_shoff);
-	em_debug("There is/are %d segment(s)\n", ehdr->e_shnum);
-	for (int i = 0; i < ehdr->e_shnum; i++) {
-		Elf64_Shdr shdr = shdr_arr[i];
-		if (shdr.sh_size && (shdr.sh_flags & SHF_ALLOC) &&
-		    (shdr.sh_type == SHT_NOBITS)) {
-			uintptr_t n_pages =
-				(PAGE_UP(shdr.sh_size) >> EPAGE_SHIFT);
-			em_debug("Mapping %d page(s) from %x to %x\n", n_pages,
-				 PAGE_DOWN(shdr.sh_addr),
-				 PAGE_DOWN(shdr.sh_addr) +
-					 PAGE_UP(n_pages << EPAGE_SHIFT));
-			if (shdr.sh_flags & SHF_WRITE)
-				alloc_page(NULL, PAGE_DOWN(shdr.sh_addr),
-					   n_pages,
-					   PTE_U | PTE_R | PTE_W | PTE_V, id);
-			else
-				alloc_page(NULL, PAGE_DOWN(shdr.sh_addr),
-					   n_pages, PTE_U | PTE_R | PTE_V, id);
-		}
-	}
+	*prog_brk = EUSR_HEAP_START;
+	// Elf64_Shdr *shdr_arr = (Elf64_Shdr *)(elf_addr + ehdr->e_shoff);
+	// em_debug("There is/are %d segment(s)\n", ehdr->e_shnum);
+	// for (int i = 0; i < ehdr->e_shnum; i++) {
+	// 	Elf64_Shdr shdr = shdr_arr[i];
+	// 	if (shdr.sh_size && (shdr.sh_flags & SHF_ALLOC) &&
+	// 	    (shdr.sh_type == SHT_NOBITS)) {
+	// 		uintptr_t n_pages =
+	// 			(PAGE_UP(shdr.sh_size) >> EPAGE_SHIFT);
+	// 		em_debug("Mapping %d page(s) from %x to %x\n", n_pages,
+	// 			 PAGE_DOWN(shdr.sh_addr),
+	// 			 PAGE_DOWN(shdr.sh_addr) +
+	// 				 PAGE_UP(n_pages << EPAGE_SHIFT));
+	// 		if (shdr.sh_flags & SHF_WRITE)
+	// 			alloc_page(NULL, PAGE_DOWN(shdr.sh_addr),
+	// 				   n_pages,
+	// 				   PTE_U | PTE_R | PTE_W | PTE_V, id);
+	// 		else
+	// 			alloc_page(NULL, PAGE_DOWN(shdr.sh_addr),
+	// 				   n_pages, PTE_U | PTE_R | PTE_V, id);
+	// 	}
+	// }
 	return ehdr->e_entry;
 }
 

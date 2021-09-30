@@ -35,13 +35,6 @@ drv_ctrl_t *init_console_driver()
 	em_debug("Before ioremap\n");
 	console_va = ioremap(NULL, console_ctrl->reg_addr, 1024);
 	em_debug("After ioremap\n");
-	uintptr_t i;
-	uint32_t val;
-	em_debug(">>> BEFORE <<<\n");
-	for (i = 0; i < 0x1c; i += 4) {
-		val = readl((void *)(console_va + i));
-		em_debug("Reg @0x%x: %x\n", i, val);
-	}
 	SBI_CALL5(SBI_EXT_EBI, console_ctrl->reg_addr, console_va,
 		  PAGE_UP(console_ctrl->reg_size), SBI_EXT_EBI_PERI_INFORM);
 
@@ -51,11 +44,6 @@ drv_ctrl_t *init_console_driver()
 	console_handler(CONSOLE_CMD_INIT, console_va, 0, 0);
 
 	em_debug("Console driver init successfully\n");
-	em_debug(">>> AFTER <<<\n");
-	for (i = 0; i < 0x1c; i += 4) {
-		val = readl((void *)(console_va + i));
-		em_debug("Reg @0x%x: %x\n", i, val);
-	}
 	// console_handler(CONSOLE_CMD_PUT, 'c', 0, 0
 	// console_handler(CONSOLE_CMD_PUT, 'o', 0, 0);
 	// console_handler(CONSOLE_CMD_PUT, 'm', 0, 0);

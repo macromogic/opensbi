@@ -208,6 +208,8 @@ void init_mem(uintptr_t _, uintptr_t id, uintptr_t payload_pa_start,
 	page_table_start =
 		PAGE_UP((uintptr_t)drv_list + MAX_DRV * sizeof(drv_addr_t));
 	page_table_size = PAGE_UP(PAGE_DIR_POOL * EPAGE_SIZE);
+	em_debug("page_table_start = 0x%x\n", page_table_start);
+	em_debug("page_table_size = 0x%x\n", page_table_size);
 	set_page_table_root(page_table_start);
 
 	trie_start = page_table_start + page_table_size;
