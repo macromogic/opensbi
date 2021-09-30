@@ -4,6 +4,7 @@
 #include "drv_util.h"
 #include "drv_syscall.h"
 #include "drv_base.h"
+#include <sbi/sbi_ecall_interface.h>
 
 #define SHOW_REG(regs, regname) \
 	em_debug(#regname ": %lx\n", regs[regname##_INDEX])
@@ -53,7 +54,7 @@ void handle_exception(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 	em_error("scause=%d, sepc=0x%llx, stval=0x%llx!\n", scause, sepc,
 		 stval);
 	dump_umode_regs(regs);
-	SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
+	SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, SBI_EXT_EBI_EXIT);
 }
 
 void handle_syscall(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
@@ -95,15 +96,11 @@ void handle_syscall(uintptr_t *regs, uintptr_t scause, uintptr_t sepc,
 	case SYS_exit:
 		// SBI_CALL(EBI_EXIT, enclave_id, arg_0, 0);
 		em_debug("SYS_exit\n");
-		SBI_CALL5(SBI_EXT_EBI, enclave_id, arg_0, 0, EBI_EXIT);
+		SBI_CALL5(SBI_EXT_EBI, enclave_id, arg_0, 0, SBI_EXT_EBI_EXIT);
 		break;
-	// case EBI_GOTO:
-	// 	//TODO SBI_CALL -> SBI_CALL5
-	// 	SBI_CALL5(SBI_EXT_EBI, enclave_id, arg_0, 0, EBI_GOTO);
-	// 	break;
 	default:
 		em_error("syscall %d unimplemented!\n", which);
-		SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, EBI_EXIT);
+		SBI_CALL5(SBI_EXT_EBI, enclave_id, 0, 0, SBI_EXT_EBI_EXIT);
 		break;
 	}
 	em_debug("Before writing sepc: sepc = 0x%lx\n", sepc);

@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <sbi/sbi_ecall_interface.h>
 
 int vsnprintf(char *out, size_t n, const char *s, va_list vl)
 {
@@ -173,7 +174,7 @@ void flush_dcache_range(unsigned long start, unsigned long end)
 	// for (; i < end; i += L1_CACHE_BYTES)
 	// 	asm volatile("cflush.d.l1"); /*dcache.cpa a0*/
 	// asm volatile(".long 0x01b0000b");    /*sync.is*/
-	SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_FLUSH_DCACHE);
+	SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, SBI_EXT_EBI_FLUSH_DCACHE);
 }
 
 void invalidate_dcache_range(unsigned long start, unsigned long end)
@@ -184,7 +185,7 @@ void invalidate_dcache_range(unsigned long start, unsigned long end)
 	// 	asm volatile("dcache.ipa a0");
 
 	// asm volatile(".long 0x01b0000b");
-	SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, EBI_DISCARD_DCACHE);
+	SBI_CALL5(SBI_EXT_EBI, 0, 0, 0, SBI_EXT_EBI_DISCARD_DCACHE);
 }
 
 void flush_tlb_range(unsigned long start, unsigned long end)

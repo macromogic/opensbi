@@ -2,6 +2,7 @@
 #include "drv_mem.h"
 #endif
 #include <sbi/ebi/memory.h>
+#include <sbi/sbi_ecall_interface.h>
 #include "drv_base.h"
 #include "drv_elf.h"
 #include "drv_list.h"
@@ -36,7 +37,7 @@ uintptr_t va_top;
 static inline void page_map_register()
 {
 	SBI_CALL5(SBI_EXT_EBI, get_page_table_root_pointer_addr(), &inv_map,
-		  &ENC_VA_PA_OFFSET, EBI_MAP_REGISTER);
+		  &ENC_VA_PA_OFFSET, SBI_EXT_EBI_MAP_REGISTER);
 }
 
 void loop_test()

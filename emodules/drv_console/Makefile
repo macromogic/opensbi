@@ -7,17 +7,17 @@ link_script = drv_console.lds
 headers = drv_console.h 
 src = drv_console.c 
 
-target_dir = ../../firmware
+target_dir := ../../build/emodules/drv_console
 
-all: drv_console
+all: dir $(target_dir)/drv_console.bin
 
-drv_console: drv_console.bin
+dir:
+	mkdir -p $(target_dir)
+
+$(target_dir)/drv_console.bin: $(target_dir)/drv_console
 	$(OBJCOPY) -O binary --set-section-flags .bss=alloc,load,contents $< $@
-	cp $@ $(target_dir)
 
-drv_console.bin: $(src) $(headers)
+$(target_dir)/drv_console: $(src) $(headers) $(link_script)
 	$(CC) $(CFLAGS) $(src) -T $(link_script) -o $@
 
-
-clean:
-	-@rm drv_console drv_console.bin $(target_dir)/drv_console
+.PHONY: all dir

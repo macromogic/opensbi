@@ -87,6 +87,7 @@ typedef struct inverse_map {
 	uint32_t count;
 } inverse_map_t;
 
+void dump_section_ownership();
 void flush_tlb(void);
 void init_memory_pool(void);
 uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va);

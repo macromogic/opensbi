@@ -3,6 +3,7 @@
 #include <sbi/ebi/memory.h>
 #include <sbi/sbi_string.h>
 #include <sbi/riscv_asm.h>
+#include <sbi/riscv_locks.h>
 
 extern char _console_start, _console_end;
 drv_addr_t __drv_addr_list[MAX_DRV] = { { .drv_start =
@@ -10,6 +11,17 @@ drv_addr_t __drv_addr_list[MAX_DRV] = { { .drv_start =
 					  .drv_end  = (uintptr_t)&_console_end,
 					  .using_by = -1 } };
 drv_addr_t *drv_addr_list = __drv_addr_list; // Tricky! Do not change this!
+spinlock_t drv_lock[MAX_DRV];
+
+void drv_fetch(uintptr_t drv_to_fetch)
+{
+	spin_lock(&drv_lock[drv_to_fetch]);
+}
+
+void drv_release(uintptr_t drv_to_release)
+{
+	spin_unlock(&drv_lock[drv_to_release]);
+}
 
 uintptr_t copy_drv_with_list(uintptr_t *dst_addr, uintptr_t drv_mask)
 {

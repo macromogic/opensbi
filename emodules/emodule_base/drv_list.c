@@ -2,6 +2,17 @@
 #include "mm/drv_page_pool.h"
 #include "mm/page_table.h"
 #include "../drv_console/drv_console.h"
+#include <sbi/sbi_ecall_interface.h>
+
+void drv_fetch(uintptr_t drv_to_fetch)
+{
+	SBI_CALL5(SBI_EXT_EBI, drv_to_fetch, 0, 0, SBI_EXT_EBI_FETCH);
+}
+
+void drv_release(uintptr_t drv_to_release)
+{
+	SBI_CALL5(SBI_EXT_EBI, drv_to_release, 0, 0, SBI_EXT_EBI_RELEASE);
+}
 
 drv_ctrl_t *init_console_driver()
 {
@@ -32,7 +43,7 @@ drv_ctrl_t *init_console_driver()
 		em_debug("Reg @0x%x: %x\n", i, val);
 	}
 	SBI_CALL5(SBI_EXT_EBI, console_ctrl->reg_addr, console_va,
-		  PAGE_UP(console_ctrl->reg_size), EBI_PERI_INFORM);
+		  PAGE_UP(console_ctrl->reg_size), SBI_EXT_EBI_PERI_INFORM);
 
 	em_debug("console_va: 0x%x\n, entry: 0x%lx\n", console_va,
 		 get_pa(console_va));

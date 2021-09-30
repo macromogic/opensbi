@@ -33,23 +33,6 @@ typedef struct {
 	uintptr_t used;
 } pmp_region;
 
-typedef enum {
-	EBI_START = 398,
-	EBI_CREATE,
-	EBI_ENTER,
-	EBI_EXIT,
-	EBI_GOTO,
-	EBI_FETCH,
-	EBI_RELEASE,
-	EBI_MEM_ALLOC,
-	EBI_PUTS,
-	EBI_GETS,
-	EBI_PERI_INFORM,
-	EBI_MAP_REGISTER,
-	EBI_FLUSH_DCACHE,
-	EBI_DISCARD_DCACHE
-} ebi_funcid_t;
-
 #endif // __ASSEMBLER__
 
 #define likely(x) __builtin_expect((x), 1)

@@ -9,9 +9,40 @@ spinlock_t memory_pool_lock;
 
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic push
-static void dump_section_ownership()
+void dump_section_ownership()
 {
-	sbi_debug("Nothing\n");
+	/*
+	int i, j;
+	section_t *sec;
+	// const int line_len = 5; // complex version
+	const int line_len = 32; // brief version
+
+	// complex version (do not delete)
+	sbi_debug("------------------------- start\n");
+	// for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
+	// 	for (i = 0, sec = &memory_pool[i+j];
+	// 			i < line_len;
+	// 			i++, sec = &memory_pool[i+j])
+	// 		sbi_printf("0x%lx: %d\t", sec->sfn, sec->owner);
+	// 	sbi_printf("\n");
+	// }
+
+	// brief version (do not delete)
+	for (j = 0; j < MEMORY_POOL_SECTION_NUM; j += line_len) {
+
+		for (i = 0, sec = &memory_pool[i + j];
+		     i < line_len && i + j < MEMORY_POOL_SECTION_NUM;
+		     i++, sec = &memory_pool[i + j]) {
+			if (sec->owner < 0)
+				sbi_printf("%4s", "x");
+			else
+				sbi_printf("%4d", sec->owner);
+		}
+		sbi_printf("\n");
+	}
+
+	sbi_debug("--------------------------- end\n");
+	//*/
 }
 #pragma GCC diagnostic pop
 
@@ -56,6 +87,7 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 	uintptr_t eid;
 	uintptr_t ret = 0;
 	region_t smallest, avail;
+	int tried_flag = 0;
 
 	if (!ectx) {
 		sbi_error("Context is NULL!\n");
@@ -71,7 +103,6 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 	// 1. Look for available sections adjacent to allocated
 	//    sections owned by the enclave. If found, update PMP config
 	//    and return the pa of the section
-	spin_lock(&memory_pool_lock);
 	for_each_section_in_pool(memory_pool, sec, i)
 	{
 		if (sec->owner != eid)
@@ -95,7 +126,6 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 			}
 		}
 	}
-	spin_unlock(&memory_pool_lock);
 
 	// 2. If no such section exists, then check whether the PMP resource
 	//    has run out. If not, allocate a new section for the enclave
@@ -103,7 +133,15 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 		sec = find_available_section();
 		if (!sec) {
 			sbi_error("Out of memory!\n");
+			while (1)
+				;
 			return 0;
+		}
+		for (int i = 0; i < PMP_REGION_MAX; i++) {
+			if (!ectx->pmp_reg[i].used) {
+				ectx->pmp_reg[i].used = 1;
+				break;
+			}
 		}
 		ret = sec->sfn;
 		goto found;
@@ -115,16 +153,29 @@ uintptr_t alloc_section_for_enclave(enclave_context_t *ectx, uintptr_t va)
 	//    N + 1 sections. If found, perform section migration and allocate
 	//    a section.
 try_find:
+
 	smallest = find_smallest_region(eid);
 	avail	 = find_avail_region_larger_than(smallest.length);
+
+	sbi_debug("smallest at 0x%lx, len = 0x%lx\n",
+		  smallest.sfn << SECTION_SHIFT, smallest.length);
+	sbi_debug("avail at 0x%lx, len = 0x%lx\n", avail.sfn << SECTION_SHIFT,
+		  avail.length);
 	if (avail.length) {
-		section_migration(smallest.sfn, avail.sfn);
+		for (int i = 0; i < smallest.length; i++) {
+			section_migration(smallest.sfn + i, avail.sfn + i);
+		}
 		ret = smallest.sfn + smallest.length;
+		dump_section_ownership();
 		goto found;
 	}
-
+	if (tried_flag) {
+		return 0;
+	}
 	// 4. If still not found, do page compaction, then repeat step 3.
+	sbi_printf("compact due to %ld\n", eid);
 	page_compaction();
+	tried_flag = 1;
 	sbi_debug("After compaction\n");
 	// repeat step 3
 	goto try_find;
@@ -132,6 +183,7 @@ try_find:
 found:
 	set_section_zero(ret);
 	update_section_info(ret, eid, va);
+	dump_section_ownership();
 	// PMP
 
 	return ret << SECTION_SHIFT;
@@ -142,7 +194,9 @@ void free_section_for_enclave(int eid)
 	int i;
 	section_t *sec;
 
+#ifdef EBI_DEBUG
 	dump_section_ownership();
+#endif
 
 	spin_lock(&memory_pool_lock);
 	sbi_debug("Got memory pool lock\n");
@@ -154,7 +208,27 @@ void free_section_for_enclave(int eid)
 	}
 	spin_unlock(&memory_pool_lock);
 
+#ifdef EBI_DEBUG
 	dump_section_ownership();
+#endif
+}
+
+inverse_map_t *look_up_inverse_map(inverse_map_t *inv_map, uintptr_t pa)
+{
+	// region search
+	// for (int i = 0; inv_map[i].pa && i < INVERSE_MAP_ENTRY_NUM; i++) {
+	// 	if (inv_map[i].pa <= pa
+	// 	&& pa < inv_map[i].pa + inv_map[i].count * EPAGE_SIZE)
+	// 		return &inv_map[i];
+	// }
+
+	// entry search (assume properly invoked)
+	for (int i = 0; inv_map[i].pa && i < INVERSE_MAP_ENTRY_NUM; i++) {
+		if (inv_map[i].pa == pa)
+			return &inv_map[i];
+	}
+
+	return NULL;
 }
 
 int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
@@ -164,23 +238,26 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	uintptr_t src_pa	  = src_sfn << SECTION_SHIFT;
 	uintptr_t dst_pa	  = dst_sfn << SECTION_SHIFT;
 	uintptr_t pa_diff	  = dst_pa - src_pa;
-	uintptr_t eid		  = src_sec->owner;
+	uintptr_t src_owner	  = src_sec->owner;
 	uintptr_t linear_start_va = src_sec->va;
-	enclave_context_t *ectx	  = eid_to_context(eid);
+	uint32_t hartid		  = current_hartid();
+	uintptr_t eid		  = (uintptr_t)enclave_on_core[hartid];
+	enclave_context_t *ectx	  = eid_to_context(src_owner);
 	char is_base_module	  = 0;
 	uintptr_t *pt_root_addr, *offset_addr;
 	inverse_map_t *inv_map_addr;
 	uintptr_t pt_root;
-	uintptr_t satp, offset;
-	int i;
+	uintptr_t va;
+	uintptr_t satp;
 	inverse_map_t *inv_map_entry;
 
-	sbi_debug("src_pa = 0x%lx, dst_pa = px%lx, pa_diff = 0x%lx\n", src_pa,
-		  dst_pa, pa_diff);
-	sbi_debug("eid = 0x%lx\n", eid);
+	sbi_debug(
+		"src_pa = 0x%lx, dst_pa = px%lx, pa_diff = 0x%lx, owner: %d\n",
+		src_pa, dst_pa, pa_diff, src_sec->owner);
+	sbi_debug("src_owner = %ld\n", src_owner);
 	sbi_debug("linear_start_va = 0x%lx\n", linear_start_va);
 
-	if (eid < 0 || ectx == NULL) {
+	if (src_owner < 0 || ectx == NULL) {
 		sbi_error("Invalid EID or context!\n");
 		return 0;
 	}
@@ -197,12 +274,13 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 
 	// 1. judge whether the section contains a base module
 	if (src_sfn == SECTION_DOWN((uintptr_t)pt_root_addr) >> SECTION_SHIFT) {
+		sbi_debug("is base module\n");
 		is_base_module = 1;
 	}
 
 	// 2. Copy section content, set section VA&owner
 	sbi_memcpy((void *)dst_pa, (void *)src_pa, SECTION_SIZE);
-	dst_sec->owner = eid;
+	dst_sec->owner = src_owner;
 	dst_sec->va    = linear_start_va;
 
 	// 3. For base module, calculate the new PA of pt_root,
@@ -220,11 +298,18 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 		offset_addr  = (uintptr_t *)ectx->offset_addr;
 
 		// Update pt_root
-		*pt_root_addr += pa_diff;
+		*pt_root_addr += pa_diff; // value of pt_root update
 		pt_root = *pt_root_addr;
 		satp	= pt_root >> EPAGE_SHIFT;
 		satp |= (uintptr_t)SATP_MODE_SV39 << SATP_MODE_SHIFT;
-		csr_write(CSR_SATP, satp);
+		if ((int)eid == src_sec->owner) {
+			csr_write(CSR_SATP, satp);
+		} else {
+			sbi_debug("not owner.\n");
+			enclave_context_t *owner_context =
+				eid_to_context(src_sec->owner);
+			owner_context->ns_satp = satp;
+		}
 		*offset_addr -= pa_diff;
 	}
 
@@ -235,25 +320,23 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 	//		(1). updates its linear map pte
 	//		(2). check the inverse map, update the PTE if PA is
 	//		     in the table and update the inverse map
-	update_tree_pte(pt_root, pa_diff);
-	for (offset = 0; offset < SECTION_SIZE; offset += EPAGE_SIZE) {
-		update_leaf_pte(pt_root, linear_start_va + offset,
-				dst_pa + offset);
+	if (is_base_module)
+		update_tree_pte(pt_root, pa_diff);
+
+	for (uintptr_t offset = 0; offset < SECTION_SIZE;
+	     offset += EPAGE_SIZE) {
+		va = linear_start_va + offset;
+		update_leaf_pte(pt_root, va, dst_pa + offset);
 	}
 
-	for (offset = 0; offset < SECTION_SIZE; offset += EPAGE_SIZE) {
-		inv_map_entry = NULL;
-		for (i = 0; inv_map_addr[i].pa && i < INVERSE_MAP_ENTRY_NUM;
-		     ++i) {
-			if (inv_map_addr[i].pa == src_pa + offset) {
-				break;
-			}
-		}
+	for (uintptr_t offset = 0; offset < SECTION_SIZE;
+	     offset += EPAGE_SIZE) {
+		inv_map_entry = look_up_inverse_map(
+			(inverse_map_t *)inv_map_addr, src_pa + offset);
 		if (inv_map_entry) {
-			for (i = 0; i < inv_map_entry->count; ++i) {
-				update_leaf_pte(pt_root,
-						inv_map_entry->va +
-							i * EPAGE_SIZE,
+			for (int i = 0; i < inv_map_entry->count; i++) {
+				va = inv_map_entry->va + i * EPAGE_SIZE;
+				update_leaf_pte(pt_root, va,
 						inv_map_entry->pa + pa_diff +
 							i * PAGE_SIZE);
 			}
@@ -268,12 +351,12 @@ int section_migration(uintptr_t src_sfn, uintptr_t dst_sfn)
 
 	// 6. Flush TLB and D-cache
 	flush_tlb();
-	flush_dcache_range(dst_pa, dst_pa + SECTION_SIZE);
-	invalidate_dcache_range(src_pa, src_pa + SECTION_SIZE);
-	if (!is_base_module) {
-		flush_dcache_range(pt_root,
-				   pt_root + PAGE_DIR_POOL * EPAGE_SIZE);
-	}
+	// flush_dcache_range(dst_pa, dst_pa + SECTION_SIZE);
+	// invalidate_dcache_range(src_pa, src_pa + SECTION_SIZE);
+	// if (!is_base_module) {
+	// 	flush_dcache_range(pt_root,
+	// 			   pt_root + PAGE_DIR_POOL * EPAGE_SIZE);
+	// }
 
 	return dst_sfn;
 }
